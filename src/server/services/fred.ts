@@ -37,7 +37,7 @@ function cacheSet<T>(k: string, v: T, ttlMs: number) {
   memCache.set(k, { expires: Date.now() + ttlMs, value: v });
 }
 
-async function fetchWithTimeout(url: string, timeoutMs = 9000): Promise<string> {
+async function fetchWithTimeout(url: string, timeoutMs = 6000): Promise<string> {
   const c = new AbortController();
   const t = setTimeout(() => c.abort(), timeoutMs);
   try {
@@ -68,9 +68,16 @@ export async function getFredSeries(
   const hit = cacheGet<YieldPoint[]>(key);
   if (hit) return hit;
 
+  // Clip to last ~2 years so the CSV payload stays under ~10KB.
+  // Full history is 250KB+ and that's what was timing out on Netlify Lambdas.
+  // 2y covers the 60d z-score window for daily *and* weekly series (WALCL, TGA).
+  const cosd = new Date(Date.now() - 730 * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+
   try {
     const csv = await fetchWithTimeout(
-      `https://fred.stlouisfed.org/graph/fredgraph.csv?id=${encodeURIComponent(seriesId)}`,
+      `https://fred.stlouisfed.org/graph/fredgraph.csv?id=${encodeURIComponent(seriesId)}&cosd=${cosd}`,
     );
     const rows = csv.trim().split(/\r?\n/);
     rows.shift();
