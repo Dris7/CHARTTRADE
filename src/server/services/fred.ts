@@ -1,7 +1,16 @@
 import "server-only";
 
 // FRED (St. Louis Fed) — the most reliable free macro data source.
-// The `fredgraph.csv` endpoint requires NO API key.
+//
+// Two paths, in priority order:
+//   1. Official JSON API (`api.stlouisfed.org/fred/series/observations`)
+//      — requires FRED_API_KEY (free at https://fredaccount.stlouisfed.org/apikeys).
+//      — fast (under 1s), 120 req/min, no AWS-IP throttling.
+//   2. Public CSV gateway (`fredgraph.csv?id=...`)
+//      — no key but slow from cloud IPs and bot-throttled.
+//      — used as fallback when no key is configured.
+
+import { env } from "~/env";
 
 export interface YieldPoint {
   date: string;
@@ -60,21 +69,51 @@ async function fetchWithTimeout(url: string, timeoutMs = 6000): Promise<string> 
   }
 }
 
-export async function getFredSeries(
-  seriesId: string,
-  ttlMs = 1000 * 60 * 30,
-): Promise<YieldPoint[]> {
-  const key = `fred:${seriesId}`;
-  const hit = cacheGet<YieldPoint[]>(key);
-  if (hit) return hit;
+interface FredApiResp {
+  observations?: Array<{ date: string; value: string }>;
+}
 
+async function fetchFromApi(seriesId: string): Promise<YieldPoint[] | null> {
+  if (!env.FRED_API_KEY) return null;
+  const url =
+    `https://api.stlouisfed.org/fred/series/observations` +
+    `?series_id=${encodeURIComponent(seriesId)}` +
+    `&api_key=${encodeURIComponent(env.FRED_API_KEY)}` +
+    `&file_type=json` +
+    `&sort_order=desc` +
+    `&limit=400`;
+
+  const c = new AbortController();
+  const t = setTimeout(() => c.abort(), 6000);
+  try {
+    const res = await fetch(url, {
+      headers: { Accept: "application/json" },
+      next: { revalidate: 1800 },
+      signal: c.signal,
+    });
+    if (!res.ok) throw new Error(`FRED API ${res.status}`);
+    const json = (await res.json()) as FredApiResp;
+    const out: YieldPoint[] = [];
+    for (const o of json.observations ?? []) {
+      if (o.value === "." || o.value === "NA") continue;
+      const v = parseFloat(o.value);
+      if (Number.isFinite(v)) out.push({ date: o.date, value: v });
+    }
+    // API returns newest-first; flip to oldest-first to match CSV semantics
+    return out.reverse();
+  } catch (e) {
+    console.warn(`[fred-api] ${seriesId} failed:`, (e as Error).message);
+    return null;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+async function fetchFromCsv(seriesId: string): Promise<YieldPoint[]> {
   // Clip to last ~2 years so the CSV payload stays under ~10KB.
-  // Full history is 250KB+ and that's what was timing out on Netlify Lambdas.
-  // 2y covers the 60d z-score window for daily *and* weekly series (WALCL, TGA).
   const cosd = new Date(Date.now() - 730 * 86_400_000)
     .toISOString()
     .slice(0, 10);
-
   try {
     const csv = await fetchWithTimeout(
       `https://fred.stlouisfed.org/graph/fredgraph.csv?id=${encodeURIComponent(seriesId)}&cosd=${cosd}`,
@@ -88,12 +127,26 @@ export async function getFredSeries(
       const v = parseFloat(valueStr);
       if (Number.isFinite(v)) out.push({ date, value: v });
     }
-    cacheSet(key, out, ttlMs);
     return out;
   } catch (e) {
-    console.warn(`[fred] ${seriesId} failed:`, (e as Error).message);
+    console.warn(`[fred-csv] ${seriesId} failed:`, (e as Error).message);
     return [];
   }
+}
+
+export async function getFredSeries(
+  seriesId: string,
+  ttlMs = 1000 * 60 * 30,
+): Promise<YieldPoint[]> {
+  const cacheKey = `fred:${seriesId}`;
+  const hit = cacheGet<YieldPoint[]>(cacheKey);
+  if (hit) return hit;
+
+  // Prefer the official API (fast + reliable from cloud IPs); fall back to CSV.
+  const apiResult = await fetchFromApi(seriesId);
+  const out = apiResult ?? (await fetchFromCsv(seriesId));
+  cacheSet(cacheKey, out, ttlMs);
+  return out;
 }
 
 // --- yields snapshot --------------------------------------------------------
