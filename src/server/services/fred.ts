@@ -1,25 +1,24 @@
 import "server-only";
 
 // FRED (St. Louis Fed) — the most reliable free macro data source.
-// The `fredgraph.csv` endpoint requires NO API key. We use it for yields,
-// VIX history, USD index, gold, oil.
+// The `fredgraph.csv` endpoint requires NO API key.
 
 export interface YieldPoint {
-  date: string; // YYYY-MM-DD
+  date: string;
   value: number;
 }
 
 export const YIELD_SERIES = {
-  US2Y: { fred: "DGS2", label: "US 2Y", source: "fred" },
-  US5Y: { fred: "DGS5", label: "US 5Y", source: "fred" },
-  US10Y: { fred: "DGS10", label: "US 10Y", source: "fred" },
-  US30Y: { fred: "DGS30", label: "US 30Y", source: "fred" },
-  DE10Y: { fred: "IRLTLT01DEM156N", label: "DE 10Y", source: "fred" },
+  US2Y: { fred: "DGS2", label: "US 2Y" },
+  US5Y: { fred: "DGS5", label: "US 5Y" },
+  US10Y: { fred: "DGS10", label: "US 10Y" },
+  US30Y: { fred: "DGS30", label: "US 30Y" },
+  DE10Y: { fred: "IRLTLT01DEM156N", label: "DE 10Y" },
 } as const;
 
 export type YieldKey = keyof typeof YIELD_SERIES;
 
-// --- generic FRED CSV/JSON layer --------------------------------------------
+// --- generic fetch + cache --------------------------------------------------
 
 interface CacheEntry<T> {
   expires: number;
@@ -58,10 +57,6 @@ async function fetchWithTimeout(url: string, timeoutMs = 15000): Promise<string>
   }
 }
 
-/**
- * Fetch a FRED series via the no-key `fredgraph.csv` endpoint.
- * Returns an array of { date, value } points, sorted ascending.
- */
 export async function getFredSeries(
   seriesId: string,
   ttlMs = 1000 * 60 * 30,
@@ -75,7 +70,7 @@ export async function getFredSeries(
       `https://fred.stlouisfed.org/graph/fredgraph.csv?id=${encodeURIComponent(seriesId)}`,
     );
     const rows = csv.trim().split(/\r?\n/);
-    rows.shift(); // header
+    rows.shift();
     const out: YieldPoint[] = [];
     for (const line of rows) {
       const [date, valueStr] = line.split(",");
@@ -91,13 +86,13 @@ export async function getFredSeries(
   }
 }
 
-// --- Yields snapshot (used by the Yield Monitor widget) ---------------------
+// --- yields snapshot --------------------------------------------------------
 
 export interface YieldRow {
   key: YieldKey;
   label: string;
   value: number | null;
-  change1d: number | null; // in percentage points
+  change1d: number | null;
   change1w: number | null;
   change1m: number | null;
   source: "fred" | "none";
@@ -137,3 +132,72 @@ export async function getLatestYields(): Promise<YieldRow[]> {
   );
 }
 
+// --- macro series for the regime engine -------------------------------------
+
+/** ICE BofA US High Yield OAS, in %. Multiply by 100 for basis points. */
+export function getHyOasSeries() {
+  return getFredSeries("BAMLH0A0HYM2");
+}
+
+export async function getCurve2s10sSeries(): Promise<YieldPoint[]> {
+  const [twos, tens] = await Promise.all([
+    getFredSeries("DGS2"),
+    getFredSeries("DGS10"),
+  ]);
+  const byDate2 = new Map(twos.map((p) => [p.date, p.value]));
+  const out: YieldPoint[] = [];
+  for (const t of tens) {
+    const two = byDate2.get(t.date);
+    if (two !== undefined) {
+      out.push({ date: t.date, value: t.value - two });
+    }
+  }
+  return out;
+}
+
+/**
+ * Fed Net Liquidity = WALCL (Fed balance sheet, $M)
+ *                   − WTREGEN (Treasury General Account, $M)
+ *                   − RRPONTSYD (Reverse Repo, $B → ×1000 to $M)
+ * Returned in $ trillions for display.
+ */
+export async function getNetLiquiditySeries(): Promise<YieldPoint[]> {
+  const [walcl, tga, rrp] = await Promise.all([
+    getFredSeries("WALCL"), // $ millions, weekly
+    getFredSeries("WTREGEN"), // $ millions, weekly
+    getFredSeries("RRPONTSYD"), // $ billions, daily
+  ]);
+  if (walcl.length === 0) return [];
+
+  // Build a daily forward-fill of TGA and RRP onto WALCL's weekly dates.
+  const tgaByDate = new Map(tga.map((p) => [p.date, p.value]));
+  const rrpByDate = new Map(rrp.map((p) => [p.date, p.value]));
+
+  let lastTga = tga[0]?.value ?? 0;
+  let lastRrp = rrp[0]?.value ?? 0;
+
+  const out: YieldPoint[] = [];
+  // Iterate WALCL weeks; for each, pick the closest TGA/RRP value at or before
+  for (const w of walcl) {
+    const t = tgaByDate.get(w.date);
+    if (t !== undefined) lastTga = t;
+    const r = rrpByDate.get(w.date);
+    if (r !== undefined) lastRrp = r;
+    // Net liq in $T = (WALCL − TGA − RRP×1000) / 1_000_000
+    const netLiqUsdM = w.value - lastTga - lastRrp * 1000;
+    out.push({ date: w.date, value: netLiqUsdM / 1_000_000 });
+  }
+  return out;
+}
+
+export function getSpxSeries() {
+  return getFredSeries("SP500");
+}
+
+export function getVixSeries() {
+  return getFredSeries("VIXCLS");
+}
+
+export function getDxySeries() {
+  return getFredSeries("DTWEXBGS");
+}
