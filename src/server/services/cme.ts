@@ -72,7 +72,7 @@ async function fetchCme(productId: number): Promise<CmeQuote | null> {
     if (!res.ok) throw new Error(`CME ${res.status}`);
     const data = (await res.json()) as CmeResp;
     const front = data.quotes?.[0];
-    if (!front || !front.last) return null;
+    if (!front?.last) return null;
     const last = num(front.last);
     const prev = num(front.priorSettle) || last;
     const change = num(front.change) || last - prev;
@@ -109,7 +109,7 @@ function num(s?: string): number {
   // parser; for now we strip commas and parse what we can.
   const stripped = s.replace(/,/g, "");
   // Bond fut notation "109'205" → 109 + 20.5/32 = 109.6406
-  const m = stripped.match(/^(-?\d+)'(\d+)$/);
+  const m = /^(-?\d+)'(\d+)$/.exec(stripped);
   if (m) {
     const whole = parseInt(m[1]!, 10);
     const frac = m[2]!;

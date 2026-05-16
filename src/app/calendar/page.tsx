@@ -30,7 +30,7 @@ export default function CalendarPage() {
   const [days, setDays] = useState<number>(45);
 
   const { data, isLoading } = api.calendar.upcoming.useQuery({
-    impact: Array.from(impacts) as Impact[],
+    impact: Array.from(impacts),
     days,
   });
 

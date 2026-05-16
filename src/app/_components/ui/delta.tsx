@@ -6,7 +6,7 @@ export function Delta({
   className = "",
 }: {
   value: number | null | undefined;
-  unit?: "%" | "bp" | "" | string;
+  unit?: string;
   digits?: number;
   showSign?: boolean;
   className?: string;

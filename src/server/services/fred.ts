@@ -4,8 +4,6 @@ import "server-only";
 // The `fredgraph.csv` endpoint requires NO API key. We use it for yields,
 // VIX history, USD index, gold, oil.
 
-import { env } from "~/env";
-
 export interface YieldPoint {
   date: string; // YYYY-MM-DD
   value: number;
@@ -139,7 +137,3 @@ export async function getLatestYields(): Promise<YieldRow[]> {
   );
 }
 
-// Acknowledge the env var so unused-warnings don't fire — we keep it around in
-// case the user later wants the JSON API (it gives intraday updates for some
-// series whereas fredgraph.csv is EOD only).
-void env;

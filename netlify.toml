@@ -1,0 +1,11 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# Bump function timeout so FRED's slow CSV (5–8 s) doesn't get cut.
+# Free tier max is 10 s; Pro is 26 s.
+[functions]
+  node_bundler = "esbuild"

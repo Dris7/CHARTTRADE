@@ -22,13 +22,14 @@ export interface CgCandle {
 
 const cache = new Map<string, { exp: number; v: unknown }>();
 
-interface CgSimpleResp {
-  [coin: string]: {
+type CgSimpleResp = Record<
+  string,
+  {
     usd?: number;
     usd_24h_change?: number;
     last_updated_at?: number;
-  };
-}
+  }
+>;
 
 interface CgMarketChartResp {
   prices?: Array<[number, number]>;

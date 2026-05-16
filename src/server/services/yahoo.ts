@@ -152,7 +152,7 @@ async function yfFetch<T>(path: string, ttlMs: number): Promise<T> {
         lastErr = e;
       }
     }
-    throw lastErr ?? new Error("yf fetch failed");
+    throw lastErr instanceof Error ? lastErr : new Error("yf fetch failed");
   } finally {
     release();
   }

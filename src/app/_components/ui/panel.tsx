@@ -32,7 +32,7 @@ export function Panel({
     <section
       className={`relative overflow-hidden rounded-md ${TONE[tone]} ${className}`}
     >
-      {(title || right) && (
+      {(title ?? right) && (
         <header className="flex items-baseline justify-between gap-3 border-b border-(--color-border) px-3 py-2">
           <div className="flex items-baseline gap-2">
             {title && <span className="label">{title}</span>}
