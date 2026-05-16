@@ -37,7 +37,7 @@ function cacheSet<T>(k: string, v: T, ttlMs: number) {
   memCache.set(k, { expires: Date.now() + ttlMs, value: v });
 }
 
-async function fetchWithTimeout(url: string, timeoutMs = 15000): Promise<string> {
+async function fetchWithTimeout(url: string, timeoutMs = 9000): Promise<string> {
   const c = new AbortController();
   const t = setTimeout(() => c.abort(), timeoutMs);
   try {
@@ -47,7 +47,10 @@ async function fetchWithTimeout(url: string, timeoutMs = 15000): Promise<string>
           "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
         Accept: "text/csv,*/*",
       },
-      cache: "no-store",
+      // 30-min Next.js fetch cache. On Netlify this lands in the Blobs store
+      // and is shared across all Lambda invocations — fixes the cold-start
+      // timeouts we were hitting on serverless.
+      next: { revalidate: 1800 },
       signal: c.signal,
     });
     if (!res.ok) throw new Error(`FRED ${res.status}`);

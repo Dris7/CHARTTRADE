@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   Activity,
   CalendarDays,
@@ -106,7 +107,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <span className="tabular">LIVE</span>
             </div>
             <div className="hidden tabular text-(--color-fg-mute) sm:block">
-              {new Date().toUTCString().slice(17, 25)} UTC
+              <LiveClock />
             </div>
           </div>
         </header>
@@ -115,6 +116,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
     </div>
   );
+}
+
+/**
+ * Client-only clock to avoid SSR/CSR hydration mismatches.
+ * Renders nothing on the server (and on first render), then updates each
+ * second after mount.
+ */
+function LiveClock() {
+  const [now, setNow] = useState<string | null>(null);
+  useEffect(() => {
+    const tick = () => setNow(new Date().toUTCString().slice(17, 25) + " UTC");
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
+  return <span suppressHydrationWarning>{now ?? ""}</span>;
 }
 
 function pageTitle(pathname: string | null): string {

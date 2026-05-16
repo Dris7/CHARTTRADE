@@ -90,7 +90,8 @@ export async function getInvestingHistory(
         Referer: "https://tvc-invdn-com.investing.com/",
         "Content-Type": "text/plain",
       },
-      cache: "no-store",
+      // 2-min Next.js fetch cache (delayed feed; refresh on Netlify ~30/hr)
+      next: { revalidate: 120 },
       signal: c.signal,
     });
     if (!res.ok) throw new Error(`investing ${res.status}`);

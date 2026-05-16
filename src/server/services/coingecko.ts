@@ -46,7 +46,7 @@ async function fetchCg<T>(path: string, ttlMs: number): Promise<T | null> {
   try {
     const res = await fetch(`https://api.coingecko.com/api/v3${path}`, {
       headers: { Accept: "application/json" },
-      cache: "no-store",
+      next: { revalidate: 60 },
       signal: c.signal,
     });
     if (!res.ok) throw new Error(`coingecko ${res.status}`);

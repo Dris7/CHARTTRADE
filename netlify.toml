@@ -5,7 +5,12 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-# Bump function timeout so FRED's slow CSV (5–8 s) doesn't get cut.
-# Free tier max is 10 s; Pro is 26 s.
 [functions]
   node_bundler = "esbuild"
+
+# Bump function timeout for the tRPC handler. The dashboard's regime engine
+# hits 6 FRED series on the first cold request (subsequent requests come
+# from the Blobs cache via `next: { revalidate: 1800 }`).
+# Free/Hobby cap: 10–15 s. Pro: 26 s. We request 26 — Netlify caps to plan.
+[functions."api/trpc/[trpc]"]
+  timeout = 26
