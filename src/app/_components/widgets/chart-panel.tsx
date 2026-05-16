@@ -16,17 +16,45 @@ import { Panel } from "~/app/_components/ui/panel";
 import { Delta } from "~/app/_components/ui/delta";
 import { type SymbolKey } from "~/server/services/symbols";
 
-type Range = "5d" | "1mo" | "3mo" | "6mo" | "1y";
-type Interval = "1h" | "1d";
+type Range = "1d" | "5d" | "1mo" | "3mo" | "6mo" | "1y" | "5y";
+type Interval =
+  | "1m"
+  | "5m"
+  | "15m"
+  | "30m"
+  | "1h"
+  | "1d"
+  | "1wk"
+  | "1mo";
 type Style = "area" | "candles";
+type TfId = string;
 
-const RANGES: Array<{ label: string; range: Range; interval: Interval }> = [
-  { label: "5D", range: "5d", interval: "1h" },
-  { label: "1M", range: "1mo", interval: "1d" },
-  { label: "3M", range: "3mo", interval: "1d" },
-  { label: "6M", range: "6mo", interval: "1d" },
-  { label: "1Y", range: "1y", interval: "1d" },
+interface Timeframe {
+  id: TfId;
+  label: string;
+  range: Range;
+  interval: Interval;
+}
+
+const TIMEFRAMES: Timeframe[] = [
+  { id: "5m", label: "5m", range: "5d", interval: "5m" },
+  { id: "15m", label: "15m", range: "5d", interval: "15m" },
+  { id: "30m", label: "30m", range: "1mo", interval: "30m" },
+  { id: "1h", label: "1H", range: "1mo", interval: "1h" },
+  { id: "1d", label: "1D", range: "6mo", interval: "1d" },
+  { id: "1w", label: "1W", range: "1y", interval: "1wk" },
+  { id: "1mth", label: "1M", range: "5y", interval: "1mo" },
 ];
+
+const DEFAULT_TF_BY_RANGE: Record<Range, TfId> = {
+  "1d": "5m",
+  "5d": "15m",
+  "1mo": "1h",
+  "3mo": "1h",
+  "6mo": "1d",
+  "1y": "1w",
+  "5y": "1mth",
+};
 
 export function ChartPanel({
   symbolKey,
@@ -43,9 +71,12 @@ export function ChartPanel({
   defaultStyle?: Style;
   height?: number;
 }) {
-  const [range, setRange] = useState<Range>(defaultRange);
+  const [tfId, setTfId] = useState<TfId>(
+    DEFAULT_TF_BY_RANGE[defaultRange] ?? "1d",
+  );
   const [style, setStyle] = useState<Style>(defaultStyle);
-  const cfg = RANGES.find((r) => r.range === range) ?? RANGES[2]!;
+  const cfg = TIMEFRAMES.find((t) => t.id === tfId) ?? TIMEFRAMES[4]!;
+  const range = cfg.range;
 
   const quote = api.market.quotes.useQuery(
     { keys: [symbolKey] },
@@ -86,7 +117,7 @@ export function ChartPanel({
       },
       timeScale: {
         borderColor: "#1a2230",
-        timeVisible: cfg.interval === "1h",
+        timeVisible: isIntraday(cfg.interval),
         secondsVisible: false,
       },
       autoSize: true,
@@ -198,9 +229,9 @@ export function ChartPanel({
             ]}
           />
           <ToggleGroup
-            value={range}
-            onChange={setRange}
-            options={RANGES.map((r) => ({ v: r.range, l: r.label }))}
+            value={tfId}
+            onChange={setTfId}
+            options={TIMEFRAMES.map((t) => ({ v: t.id, l: t.label }))}
           />
         </div>
       }
@@ -223,6 +254,10 @@ export function ChartPanel({
       <div ref={containerRef} style={{ width: "100%", height }} />
     </Panel>
   );
+}
+
+function isIntraday(interval: Interval): boolean {
+  return ["1m", "5m", "15m", "30m", "1h"].includes(interval);
 }
 
 function sourceLabelFor(source: string | undefined): string {

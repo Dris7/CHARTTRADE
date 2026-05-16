@@ -46,7 +46,29 @@ export const INVESTING_IDS = {
 
 export type InvestingKey = keyof typeof INVESTING_IDS;
 
-type Resolution = "1" | "5" | "15" | "30" | "60" | "300" | "D" | "W" | "M";
+export type Resolution =
+  | "1"
+  | "5"
+  | "15"
+  | "30"
+  | "60"
+  | "240"
+  | "D"
+  | "W"
+  | "M";
+
+// Minutes per bar — used to size the `from` window. D/W/M use sentinel values.
+const RESOLUTION_MIN: Record<Resolution, number> = {
+  "1": 1,
+  "5": 5,
+  "15": 15,
+  "30": 30,
+  "60": 60,
+  "240": 240,
+  D: 24 * 60,
+  W: 7 * 24 * 60,
+  M: 30 * 24 * 60,
+};
 
 interface UdfResp {
   s?: "ok" | "no_data" | "error";
@@ -64,12 +86,15 @@ const cache = new Map<string, { exp: number; v: InvestingCandle[] }>();
 export async function getInvestingHistory(
   key: InvestingKey,
   resolution: Resolution = "D",
-  daysBack = 90,
+  bars = 200,
 ): Promise<InvestingCandle[]> {
   const id = INVESTING_IDS[key];
   const now = Math.floor(Date.now() / 1000);
-  const from = now - daysBack * 86_400;
-  const cacheKey = `${id}:${resolution}:${daysBack}`;
+  // Size the from-window to roughly cover `bars` of `resolution` width,
+  // with a 2× overshoot to account for weekends + market closures.
+  const secPerBar = RESOLUTION_MIN[resolution] * 60;
+  const from = now - bars * secPerBar * 2;
+  const cacheKey = `${id}:${resolution}:${bars}`;
   const hit = cache.get(cacheKey);
   if (hit && hit.exp > Date.now()) return hit.v;
 

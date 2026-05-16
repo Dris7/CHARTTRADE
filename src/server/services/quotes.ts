@@ -25,6 +25,7 @@ import {
   INVESTING_IDS,
   getInvestingHistory,
   type InvestingKey,
+  type Resolution as InvestingResolution,
 } from "~/server/services/investing";
 import { getCryptoCandles, getCryptoQuote } from "~/server/services/coingecko";
 
@@ -161,21 +162,22 @@ export async function candles(
   interval: YahooInterval = "1d",
 ): Promise<UnifiedCandles> {
   const def = SYMBOLS[key];
+  const invRes = toInvestingRes(interval);
+  const bars = barsForRangeInterval(range, interval);
 
-  // Crypto: CoinGecko first
+  // Investing.com is our most complete source (intraday + daily).
+  if (isInvesting(key) && invRes) {
+    const data = await getInvestingHistory(key, invRes, bars);
+    if (data.length > 0) return { key, candles: data, source: "investing" };
+  }
+
+  // Crypto: CoinGecko for daily
   if (def.group === "crypto" && interval === "1d") {
     const days = rangeToDays(range);
     const cgData = await getCryptoCandles("bitcoin", Math.max(7, days));
     if (cgData.length > 0) {
       return { key, candles: cgData, source: "coingecko" };
     }
-  }
-
-  // Investing.com gives the cleanest daily history for our Bund + index set
-  if (isInvesting(key) && interval === "1d") {
-    const days = rangeToDays(range);
-    const data = await getInvestingHistory(key, "D", days);
-    if (data.length > 0) return { key, candles: data, source: "investing" };
   }
 
   // Stooq daily — works for many futures + some indices
@@ -226,6 +228,43 @@ function rangeToDays(range: YahooRange): number {
     default:
       return 4000;
   }
+}
+
+function toInvestingRes(interval: YahooInterval): InvestingResolution | null {
+  switch (interval) {
+    case "1m":
+      return "1";
+    case "5m":
+      return "5";
+    case "15m":
+      return "15";
+    case "30m":
+      return "30";
+    case "1h":
+      return "60";
+    case "1d":
+      return "D";
+    case "1wk":
+      return "W";
+    case "1mo":
+      return "M";
+    default:
+      return null;
+  }
+}
+
+// Approx bar count to request based on the (range, interval) pair.
+// ~200 bars is a good chart density. Investing.com's tvc6 hard-caps long
+// intraday windows so we keep `bars` honest per interval.
+function barsForRangeInterval(
+  range: YahooRange,
+  interval: YahooInterval,
+): number {
+  if (interval === "1d") return Math.max(60, rangeToDays(range));
+  if (interval === "1wk") return 200;
+  if (interval === "1mo") return 120;
+  // Intraday: cap at ~250 bars regardless of range
+  return 250;
 }
 
 function synthesize(
