@@ -1,29 +1,64 @@
-# Create T3 App
+# ChartTrade
 
-This is a [T3 Stack](https://create.t3.gg/) project bootstrapped with `create-t3-app`.
+A macro-first trading terminal for bonds and the S&P 500. ChartTrade reads the
+macro regime across asset classes, monitors yields and bond/equity futures, and
+surfaces the economic catalysts that move them — in a dense, terminal-style UI.
 
-## What's next? How do I make an app with this?
+## Stack
 
-We try to keep this project as simple as possible, so you can start with just the scaffolding we set up for you, and add additional things later when they become necessary.
+- **Next.js 15** (App Router) + **React 19**
+- **tRPC 11** + **TanStack Query** for the typed data layer
+- **Tailwind CSS v4** with a custom terminal design system (`src/styles/globals.css`)
+- **lightweight-charts** for price charts
+- **Vitest** for unit tests
 
-If you are not familiar with the different technologies used in this project, please refer to the respective docs. If you still are in the wind, please join our [Discord](https://t3.gg/discord) and ask for help.
+## Data sources
 
-- [Next.js](https://nextjs.org)
-- [NextAuth.js](https://next-auth.js.org)
-- [Prisma](https://prisma.io)
-- [Drizzle](https://orm.drizzle.team)
-- [Tailwind CSS](https://tailwindcss.com)
-- [tRPC](https://trpc.io)
+All free, no key required except the optional FRED key:
 
-## Learn More
+| Source            | Used for                                              | Caching |
+| ----------------- | ----------------------------------------------------- | ------- |
+| **FRED**          | Yields, macro series for the regime engine            | 30 min  |
+| **Investing.com** | Eurex bond futures (Bund/Bobl/Schatz/Buxl), indices   | 2 min   |
+| **Stooq**         | Quotes + EOD history for futures/indices              | 1–2 min |
+| **Yahoo Finance** | Fallback quotes + intraday candles                    | 30 s    |
+| **CoinGecko**     | BTC                                                   | 1 min   |
+| **ForexFactory**  | Economic calendar (this week + next week)             | 30 min  |
 
-To learn more about the [T3 Stack](https://create.t3.gg/), take a look at the following resources:
+Each market resolves through a fallback chain (`src/server/services/quotes.ts`);
+if every live source fails, charts render a clearly-labelled **simulated** series
+so the layout never breaks. Network fetches use the Next.js data cache
+(`next: { revalidate }`) so it is shared across serverless invocations.
 
-- [Documentation](https://create.t3.gg/)
-- [Learn the T3 Stack](https://create.t3.gg/en/faq#what-learning-resources-are-currently-available) — Check out these awesome tutorials
+## The regime engine
 
-You can check out the [create-t3-app GitHub repository](https://github.com/t3-oss/create-t3-app) — your feedback and contributions are welcome!
+`src/server/services/regime.ts` computes a macrostaq-style risk regime. Each
+pillar (S&P, VIX, HY credit OAS, 2s10s curve, net liquidity, DXY, crude) is
+z-scored against a 60-day rolling baseline, signed so positive = risk-on, and
+weighted into a headline σ score plus per-sector cards. The pure math lives in
+`regime-math.ts` and is unit-tested.
 
-## How do I deploy this?
+## Develop
 
-Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/vercel), [Netlify](https://create.t3.gg/en/deployment/netlify) and [Docker](https://create.t3.gg/en/deployment/docker) for more information.
+```bash
+npm install
+cp .env.example .env   # optional: add FRED_API_KEY for the faster FRED JSON API
+npm run dev            # http://localhost:3000
+```
+
+## Scripts
+
+```bash
+npm run dev          # dev server (turbo)
+npm run build        # production build
+npm run test         # run the vitest suite once
+npm run test:watch   # watch mode
+npm run typecheck    # tsc --noEmit
+npm run lint         # next lint
+```
+
+## Deploy
+
+Configured for Netlify (`netlify.toml`) with the Next.js plugin. The tRPC
+function timeout is raised to cover the cold-start FRED fan-out; subsequent
+requests are served from the shared data cache.

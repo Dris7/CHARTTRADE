@@ -29,6 +29,11 @@ import {
 } from "~/server/services/investing";
 import { getCryptoCandles, getCryptoQuote } from "~/server/services/coingecko";
 
+// Map our crypto symbol keys to CoinGecko coin ids. Extend as we add coins.
+const COINGECKO_IDS: Partial<Record<SymbolKey, string>> = {
+  BTC: "bitcoin",
+};
+
 export type QuoteSource =
   | "investing"
   | "stooq"
@@ -53,7 +58,7 @@ export async function quote(key: SymbolKey): Promise<UnifiedQuote> {
 
   // 0) Crypto: CoinGecko (free, no key, reliable)
   if (def.group === "crypto") {
-    const cg = await getCryptoQuote(key === "BTC" ? "bitcoin" : "bitcoin");
+    const cg = await getCryptoQuote(COINGECKO_IDS[key] ?? "bitcoin");
     if (cg) {
       return {
         key,
@@ -174,7 +179,10 @@ export async function candles(
   // Crypto: CoinGecko for daily
   if (def.group === "crypto" && interval === "1d") {
     const days = rangeToDays(range);
-    const cgData = await getCryptoCandles("bitcoin", Math.max(7, days));
+    const cgData = await getCryptoCandles(
+      COINGECKO_IDS[key] ?? "bitcoin",
+      Math.max(7, days),
+    );
     if (cgData.length > 0) {
       return { key, candles: cgData, source: "coingecko" };
     }

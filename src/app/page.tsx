@@ -1,5 +1,7 @@
 import { CrossAssetHeatmap } from "~/app/_components/widgets/cross-asset-heatmap";
 import { EventStrip } from "~/app/_components/widgets/event-strip";
+import { FinancialStress } from "~/app/_components/widgets/financial-stress";
+import { MacroStress } from "~/app/_components/widgets/macro-stress";
 import { RegimeHero } from "~/app/_components/widgets/regime-hero";
 import { SpotlightTile } from "~/app/_components/widgets/spotlight-tile";
 import { YieldMonitor } from "~/app/_components/widgets/yield-monitor";
@@ -41,10 +43,12 @@ export default function Home() {
             />
           </div>
           <CrossAssetHeatmap />
+          <MacroStress />
         </div>
 
         <div className="flex flex-col gap-4">
           <YieldMonitor />
+          <FinancialStress />
           <EventStrip />
         </div>
       </div>

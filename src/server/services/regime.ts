@@ -6,6 +6,7 @@ import "server-only";
 // The headline score is the weighted-average z across pillars in σ.
 
 import {
+  getCrudeSeries,
   getCurve2s10sSeries,
   getDxySeries,
   getHyOasSeries,
@@ -14,24 +15,20 @@ import {
   getVixSeries,
   type YieldPoint,
 } from "~/server/services/fred";
+import {
+  PILLAR_THRESHOLD,
+  classifyMeta,
+  classifySector,
+  formatDisplay,
+  zScore,
+  type MetaRegime,
+  type Sector,
+  type SectorRegime,
+} from "~/server/services/regime-math";
 
 export type Bias = "risk-on" | "risk-off" | "neutral";
 export type RegimeLabel = "Risk-On" | "Risk-Off" | "Neutral" | "Mixed";
-export type MetaRegime = "STABLE" | "MIXED" | "TRANSITION";
-export type Sector =
-  | "equities"
-  | "bonds"
-  | "credit"
-  | "commodities"
-  | "fx"
-  | "vol";
-export type SectorRegime =
-  | "BULLISH"
-  | "BEARISH"
-  | "NEUTRAL"
-  | "TIGHTENING"
-  | "EASING"
-  | "STANDARD HEDGING";
+export type { MetaRegime, Sector, SectorRegime };
 
 export interface Pillar {
   key: string;
@@ -76,18 +73,13 @@ export interface RegimeReport {
   computedAt: number;
 }
 
-// Macrostaq-style 60-day rolling window — calmer, regime-style readings.
-// 21d felt jumpy because today's moves dominated; 60d smooths to "the month".
-const ROLLING_WINDOW = 60;
-const PILLAR_THRESHOLD = 0.5; // |z| > 0.5σ flips a pillar
-
 interface PillarSpec {
   key: string;
   label: string;
   sector: Sector;
   weight: number;
   direction: 1 | -1; // +1: high value = risk-on; -1: inverted (high = risk-off)
-  unit: "%" | "bps" | "$T" | "";
+  unit: "%" | "bps" | "$T" | "$" | "";
   digits: number;
   fetch: () => Promise<YieldPoint[]>;
   note: (z: number, val: number) => string;
@@ -177,6 +169,20 @@ const SPECS: PillarSpec[] = [
         ? "USD bid · tightening conditions"
         : "USD soft · loosening conditions",
   },
+  {
+    key: "crude",
+    label: "Crude Oil (WTI)",
+    sector: "commodities",
+    weight: 0.05,
+    direction: +1, // firmer crude = pro-cyclical growth impulse
+    unit: "$",
+    digits: 2,
+    fetch: getCrudeSeries,
+    note: (z, val) =>
+      z > 0
+        ? `Crude firm · $${val.toFixed(0)}`
+        : `Crude soft · $${val.toFixed(0)}`,
+  },
 ];
 
 // Sector cards aggregate pillars in the same family.
@@ -188,65 +194,6 @@ const SECTOR_META: Array<{ key: Sector; label: string }> = [
   { key: "fx", label: "FX" },
   { key: "vol", label: "Vol Hedging" },
 ];
-
-function classifySector(sector: Sector, zAvg: number): SectorRegime {
-  if (sector === "credit") {
-    if (zAvg > 0.5) return "EASING";
-    if (zAvg < -0.5) return "TIGHTENING";
-    return "NEUTRAL";
-  }
-  if (sector === "vol") {
-    if (zAvg > 0.5) return "STANDARD HEDGING"; // low vol z = calm
-    if (zAvg < -0.5) return "STANDARD HEDGING"; // both calm and stressed map here in v0
-    return "STANDARD HEDGING";
-  }
-  if (zAvg > 0.5) return "BULLISH";
-  if (zAvg < -0.5) return "BEARISH";
-  return "NEUTRAL";
-}
-
-function classifyMeta(pillars: Pillar[], scoreSigma: number): {
-  meta: MetaRegime;
-  note: string;
-} {
-  // STABLE: low spread between pillars, score near zero
-  // TRANSITION: high spread (some screaming on, others off) regardless of score
-  // MIXED: middle ground
-  const contribs = pillars.map((p) => p.contribution);
-  const max = Math.max(...contribs);
-  const min = Math.min(...contribs);
-  const spread = max - min;
-
-  if (spread < 1.0 && Math.abs(scoreSigma) < 0.4) {
-    return { meta: "STABLE", note: "Cross-asset signals aligned" };
-  }
-  if (spread > 2.5) {
-    return { meta: "TRANSITION", note: "Pillars diverging — regime in flux" };
-  }
-  return { meta: "MIXED", note: "Cross-asset signals mixed" };
-}
-
-function zScore(series: number[], window = ROLLING_WINDOW): number | null {
-  if (series.length < window) return null;
-  const recent = series.slice(-window);
-  const latest = recent[recent.length - 1]!;
-  const mean = recent.reduce((s, v) => s + v, 0) / recent.length;
-  const variance =
-    recent.reduce((s, v) => s + (v - mean) ** 2, 0) / recent.length;
-  const std = Math.sqrt(variance);
-  if (std === 0 || !Number.isFinite(std)) return null;
-  return (latest - mean) / std;
-}
-
-function formatDisplay(val: number, unit: string, digits: number): string {
-  if (unit === "bps") return `${(val * 100).toFixed(digits)}bp`;
-  if (unit === "$T") return `$${val.toFixed(digits)}T`;
-  if (unit === "%") return `${val.toFixed(digits)}%`;
-  return val.toLocaleString("en-US", {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  });
-}
 
 export async function getRegimeReport(): Promise<RegimeReport> {
   const results = await Promise.all(

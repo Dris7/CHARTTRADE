@@ -80,7 +80,9 @@ async function fetchCsv(path: string, ttlMs: number): Promise<string> {
   try {
     const res = await fetch(`${HOST}${path}`, {
       headers: { "User-Agent": UA, Accept: "text/csv, text/plain,*/*" },
-      cache: "no-store",
+      // Shared Next.js data cache across serverless invocations; mirror the
+      // L1 memCache TTL so both layers expire together.
+      next: { revalidate: Math.max(30, Math.round(ttlMs / 1000)) },
       signal: controller.signal,
     });
     if (!res.ok) throw new Error(`Stooq ${res.status}`);

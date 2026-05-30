@@ -1,7 +1,8 @@
+import { CentralBankWatch } from "~/app/_components/widgets/central-bank-watch";
 import { ChartPanel } from "~/app/_components/widgets/chart-panel";
 import { SpotlightTile } from "~/app/_components/widgets/spotlight-tile";
+import { YieldCurve } from "~/app/_components/widgets/yield-curve";
 import { YieldMonitor } from "~/app/_components/widgets/yield-monitor";
-import { Panel } from "~/app/_components/ui/panel";
 
 export default function BondsPage() {
   return (
@@ -35,37 +36,21 @@ export default function BondsPage() {
         />
         <div className="flex flex-col gap-4">
           <YieldMonitor />
-          <Panel title="Bond Sentiment" hint="placeholder · ML coming">
-            <ul className="space-y-2 text-xs">
-              <li className="flex items-center justify-between">
-                <span className="text-(--color-fg-dim)">Curve 2s10s</span>
-                <span className="tabular text-(--color-fg)">inverted</span>
-              </li>
-              <li className="flex items-center justify-between">
-                <span className="text-(--color-fg-dim)">10Y real (TIPS proxy)</span>
-                <span className="tabular text-(--color-fg)">elevated</span>
-              </li>
-              <li className="flex items-center justify-between">
-                <span className="text-(--color-fg-dim)">Bund / BTP spread</span>
-                <span className="tabular text-(--color-fg)">stable</span>
-              </li>
-              <li className="flex items-center justify-between">
-                <span className="text-(--color-fg-dim)">MOVE Index</span>
-                <span className="tabular text-(--color-fg-mute)">feed pending</span>
-              </li>
-            </ul>
-          </Panel>
+          <YieldCurve />
         </div>
       </div>
 
-      <ChartPanel
-        symbolKey="ZN"
-        title="ZN · 10Y T-Note"
-        subtitle="US 10Y future"
-        defaultRange="3mo"
-        defaultStyle="candles"
-        height={380}
-      />
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.6fr_1fr]">
+        <ChartPanel
+          symbolKey="ZN"
+          title="ZN · 10Y T-Note"
+          subtitle="US 10Y future"
+          defaultRange="3mo"
+          defaultStyle="candles"
+          height={380}
+        />
+        <CentralBankWatch />
+      </div>
     </div>
   );
 }

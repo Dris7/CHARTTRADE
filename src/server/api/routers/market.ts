@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { candles, quotes } from "~/server/services/quotes";
+import { getSectorBoard } from "~/server/services/sectors";
 import { SYMBOLS, type SymbolKey } from "~/server/services/symbols";
 
 const symbolKey = z.custom<SymbolKey>(
@@ -27,4 +28,7 @@ export const marketRouter = createTRPCRouter({
       }),
     )
     .query(({ input }) => candles(input.key, input.range, input.interval)),
+
+  // S&P sector ETF heatmap + SMA breadth proxy
+  sectors: publicProcedure.query(() => getSectorBoard()),
 });

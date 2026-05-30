@@ -1,5 +1,7 @@
 import { CrossAssetHeatmap } from "~/app/_components/widgets/cross-asset-heatmap";
 import { ChartPanel } from "~/app/_components/widgets/chart-panel";
+import { CotPositioning } from "~/app/_components/widgets/cot-positioning";
+import { PredictionMarkets } from "~/app/_components/widgets/prediction-markets";
 import { Panel } from "~/app/_components/ui/panel";
 
 const PAIRS = [
@@ -21,7 +23,12 @@ export default function IntermarketPage() {
         </h1>
       </div>
 
-      <CrossAssetHeatmap />
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1.1fr]">
+        <CrossAssetHeatmap />
+        <CotPositioning />
+      </div>
+
+      <PredictionMarkets />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ChartPanel

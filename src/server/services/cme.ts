@@ -66,7 +66,8 @@ async function fetchCme(productId: number): Promise<CmeQuote | null> {
         "Accept-Language": "en-US,en;q=0.9",
         Referer: `https://www.cmegroup.com/markets/`,
       },
-      cache: "no-store",
+      // Shared Next.js data cache across serverless invocations (delayed feed).
+      next: { revalidate: 60 },
       signal: c.signal,
     });
     if (!res.ok) throw new Error(`CME ${res.status}`);

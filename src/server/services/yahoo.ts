@@ -131,7 +131,11 @@ async function yfFetch<T>(path: string, ttlMs: number): Promise<T> {
             Accept: "application/json,text/plain,*/*",
             "Accept-Language": "en-US,en;q=0.9",
           },
-          cache: "no-store",
+          // Shared Next.js data cache (Netlify Blobs on prod) so cold-start
+          // Lambdas reuse a recent response instead of each hitting Yahoo and
+          // tripping the per-IP 429 limit. L1 memCache above still dedupes
+          // within a single instance.
+          next: { revalidate: 30 },
           signal: controller.signal,
         });
         clearTimeout(timer);

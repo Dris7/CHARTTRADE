@@ -1,6 +1,7 @@
 import { ChartPanel } from "~/app/_components/widgets/chart-panel";
+import { FearGreed } from "~/app/_components/widgets/fear-greed";
+import { SectorBoard } from "~/app/_components/widgets/sector-board";
 import { SpotlightTile } from "~/app/_components/widgets/spotlight-tile";
-import { Panel } from "~/app/_components/ui/panel";
 
 export default function SP500Page() {
   return (
@@ -29,7 +30,9 @@ export default function SP500Page() {
         height={460}
       />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <SectorBoard />
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.6fr_1fr]">
         <ChartPanel
           symbolKey="VIX"
           title="VIX · Equity Vol"
@@ -38,29 +41,7 @@ export default function SP500Page() {
           defaultStyle="area"
           height={300}
         />
-        <Panel title="Breadth & Internals" hint="MVP placeholder">
-          <ul className="space-y-2 text-xs">
-            <li className="flex items-center justify-between">
-              <span className="text-(--color-fg-dim)">% above 50DMA</span>
-              <span className="tabular text-(--color-fg-mute)">feed pending</span>
-            </li>
-            <li className="flex items-center justify-between">
-              <span className="text-(--color-fg-dim)">Advance / Decline</span>
-              <span className="tabular text-(--color-fg-mute)">feed pending</span>
-            </li>
-            <li className="flex items-center justify-between">
-              <span className="text-(--color-fg-dim)">New Highs / Lows</span>
-              <span className="tabular text-(--color-fg-mute)">feed pending</span>
-            </li>
-            <li className="flex items-center justify-between">
-              <span className="text-(--color-fg-dim)">McClellan Osc.</span>
-              <span className="tabular text-(--color-fg-mute)">feed pending</span>
-            </li>
-            <li className="border-t border-(--color-border) pt-3 text-[10px] text-(--color-fg-mute)">
-              Polygon / TwelveData integration scheduled — backend stub ready.
-            </li>
-          </ul>
-        </Panel>
+        <FearGreed />
       </div>
     </div>
   );

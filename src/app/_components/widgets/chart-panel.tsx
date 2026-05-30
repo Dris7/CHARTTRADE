@@ -10,6 +10,7 @@ import {
   HistogramSeries,
 } from "lightweight-charts";
 import { useEffect, useRef, useState } from "react";
+import { TriangleAlert } from "lucide-react";
 
 import { api } from "~/trpc/react";
 import { Panel } from "~/app/_components/ui/panel";
@@ -212,10 +213,13 @@ export function ChartPanel({
 
   const q = quote.data?.[0];
 
+  const isSynthetic =
+    !candles.isLoading && candles.data?.source === "none";
   const sourceLabel = sourceLabelFor(candles.data?.source);
 
   return (
     <Panel
+      tone={isSynthetic ? "warn" : "default"}
       title={title}
       hint={subtitle ? `${subtitle} · ${sourceLabel}` : sourceLabel}
       right={
@@ -251,7 +255,26 @@ export function ChartPanel({
             : ""}
         </span>
       </div>
-      <div ref={containerRef} style={{ width: "100%", height }} />
+      <div className="relative" style={{ width: "100%", height }}>
+        <div ref={containerRef} className="h-full w-full" />
+        {isSynthetic && (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  "repeating-linear-gradient(45deg, transparent, transparent 9px, rgba(240,185,11,0.05) 9px, rgba(240,185,11,0.05) 18px)",
+              }}
+            />
+            <div className="z-10 flex items-center gap-2 rounded-sm border border-(--color-warn)/40 bg-(--color-bg)/80 px-3 py-1.5 backdrop-blur-sm">
+              <TriangleAlert size={13} className="text-(--color-warn)" />
+              <span className="text-[11px] font-medium uppercase tracking-widest text-(--color-warn)">
+                Simulated — live feed unavailable
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
     </Panel>
   );
 }

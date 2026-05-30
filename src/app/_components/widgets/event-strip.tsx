@@ -5,12 +5,14 @@ import { ArrowRight, CalendarDays } from "lucide-react";
 
 import { api } from "~/trpc/react";
 import { Panel } from "~/app/_components/ui/panel";
+import { type Impact } from "~/server/api/routers/calendar";
 
-const IMPACT_COLOR = {
+const IMPACT_COLOR: Record<Impact, string> = {
   high: "bg-(--color-down)",
   medium: "bg-(--color-warn)",
   low: "bg-(--color-fg-mute)",
-} as const;
+  holiday: "bg-(--color-accent-2)",
+};
 
 export function EventStrip() {
   const { data, isLoading } = api.calendar.upcoming.useQuery(
