@@ -11,6 +11,7 @@ import "server-only";
 //      — used as fallback when no key is configured.
 
 import { env } from "~/env";
+import { cfetch, coalesce } from "~/server/services/http";
 
 export interface YieldPoint {
   date: string;
@@ -47,26 +48,20 @@ function cacheSet<T>(k: string, v: T, ttlMs: number) {
 }
 
 async function fetchWithTimeout(url: string, timeoutMs = 6000): Promise<string> {
-  const c = new AbortController();
-  const t = setTimeout(() => c.abort(), timeoutMs);
-  try {
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
-        Accept: "text/csv,*/*",
-      },
-      // 30-min Next.js fetch cache. On Netlify this lands in the Blobs store
-      // and is shared across all Lambda invocations — fixes the cold-start
-      // timeouts we were hitting on serverless.
-      next: { revalidate: 1800 },
-      signal: c.signal,
-    });
-    if (!res.ok) throw new Error(`FRED ${res.status}`);
-    return await res.text();
-  } finally {
-    clearTimeout(t);
-  }
+  // 30-min Next Data Cache (durable on Netlify, shared across invocations).
+  // No AbortSignal — that would opt the request out of the cache; cfetch bounds
+  // latency with a timeout race instead.
+  const res = await cfetch(url, {
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+      Accept: "text/csv,*/*",
+    },
+    revalidate: 1800,
+    timeoutMs,
+  });
+  if (!res.ok) throw new Error(`FRED ${res.status}`);
+  return await res.text();
 }
 
 interface FredApiResp {
@@ -86,13 +81,11 @@ async function fetchFromApi(seriesId: string): Promise<YieldPoint[] | null> {
   // One retry: a cold dashboard fires 20+ FRED requests at once, so a single
   // series can transiently time out under the burst. Retrying once recovers it.
   for (let attempt = 0; attempt < 2; attempt++) {
-    const c = new AbortController();
-    const t = setTimeout(() => c.abort(), 9000);
     try {
-      const res = await fetch(url, {
+      const res = await cfetch(url, {
         headers: { Accept: "application/json" },
-        next: { revalidate: 1800 },
-        signal: c.signal,
+        revalidate: 1800,
+        timeoutMs: 9000,
       });
       if (!res.ok) throw new Error(`FRED API ${res.status}`);
       const json = (await res.json()) as FredApiResp;
@@ -110,8 +103,6 @@ async function fetchFromApi(seriesId: string): Promise<YieldPoint[] | null> {
         return null;
       }
       await new Promise((r) => setTimeout(r, 400));
-    } finally {
-      clearTimeout(t);
     }
   }
   return null;
@@ -150,13 +141,17 @@ export async function getFredSeries(
   const hit = cacheGet<YieldPoint[]>(cacheKey);
   if (hit) return hit;
 
-  // Prefer the official API (fast + reliable from cloud IPs); fall back to CSV.
-  const apiResult = await fetchFromApi(seriesId);
-  const out = apiResult ?? (await fetchFromCsv(seriesId));
-  // Never cache a failed/empty fetch — otherwise a transient miss poisons the
-  // series for the whole TTL. Only memoize real data.
-  if (out.length > 0) cacheSet(cacheKey, out, ttlMs);
-  return out;
+  // Coalesce concurrent requests for the same series — on a cold dashboard
+  // several procedures ask for the same series before any has cached it.
+  return coalesce(cacheKey, async () => {
+    // Prefer the official API (fast + reliable from cloud IPs); fall back to CSV.
+    const apiResult = await fetchFromApi(seriesId);
+    const out = apiResult ?? (await fetchFromCsv(seriesId));
+    // Never cache a failed/empty fetch — otherwise a transient miss poisons the
+    // series for the whole TTL. Only memoize real data.
+    if (out.length > 0) cacheSet(cacheKey, out, ttlMs);
+    return out;
+  });
 }
 
 // --- yields snapshot --------------------------------------------------------

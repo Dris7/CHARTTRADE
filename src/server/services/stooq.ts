@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cfetch, coalesce } from "~/server/services/http";
+
 // Stooq is the most reliable free market data provider. It serves CSV
 // (effectively scraped from its own site) with no auth, very high uptime, and
 // covers futures, yields, indices and FX.
@@ -74,16 +76,23 @@ async function fetchCsv(path: string, ttlMs: number): Promise<string> {
   const key = `stq:${path}`;
   const hit = cacheGet<string>(key);
   if (hit) return hit;
+  // Coalesce concurrent identical requests so a cold burst hits Stooq once.
+  return coalesce(key, () => fetchCsvUncached(path, key, ttlMs));
+}
+
+async function fetchCsvUncached(
+  path: string,
+  key: string,
+  ttlMs: number,
+): Promise<string> {
   await acquire();
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 8000);
   try {
-    const res = await fetch(`${HOST}${path}`, {
+    // Shared Next.js data cache across serverless invocations (mirror the L1
+    // memCache TTL). No AbortSignal — cfetch bounds latency + caps concurrency.
+    const res = await cfetch(`${HOST}${path}`, {
       headers: { "User-Agent": UA, Accept: "text/csv, text/plain,*/*" },
-      // Shared Next.js data cache across serverless invocations; mirror the
-      // L1 memCache TTL so both layers expire together.
-      next: { revalidate: Math.max(30, Math.round(ttlMs / 1000)) },
-      signal: controller.signal,
+      revalidate: Math.max(30, Math.round(ttlMs / 1000)),
+      timeoutMs: 8000,
     });
     if (!res.ok) throw new Error(`Stooq ${res.status}`);
     const text = await res.text();
@@ -93,7 +102,6 @@ async function fetchCsv(path: string, ttlMs: number): Promise<string> {
     cacheSet(key, text, ttlMs);
     return text;
   } finally {
-    clearTimeout(timer);
     release();
   }
 }

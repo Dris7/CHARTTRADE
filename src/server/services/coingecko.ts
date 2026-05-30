@@ -3,6 +3,8 @@ import "server-only";
 // CoinGecko free public API — no key, 10-50 calls/min.
 // We use it for BTC since the futures-oriented feeds don't cover crypto well.
 
+import { cfetch } from "~/server/services/http";
+
 export interface CgQuote {
   price: number;
   prevClose: number;
@@ -41,13 +43,11 @@ async function fetchCg<T>(path: string, ttlMs: number): Promise<T | null> {
   const hit = cache.get(key);
   if (hit && hit.exp > Date.now()) return hit.v as T;
 
-  const c = new AbortController();
-  const t = setTimeout(() => c.abort(), 8000);
   try {
-    const res = await fetch(`https://api.coingecko.com/api/v3${path}`, {
+    const res = await cfetch(`https://api.coingecko.com/api/v3${path}`, {
       headers: { Accept: "application/json" },
-      next: { revalidate: 60 },
-      signal: c.signal,
+      revalidate: 60,
+      timeoutMs: 8000,
     });
     if (!res.ok) throw new Error(`coingecko ${res.status}`);
     const v = (await res.json()) as T;
@@ -56,8 +56,6 @@ async function fetchCg<T>(path: string, ttlMs: number): Promise<T | null> {
   } catch (e) {
     console.warn(`[coingecko] ${path} failed:`, (e as Error).message);
     return null;
-  } finally {
-    clearTimeout(t);
   }
 }
 

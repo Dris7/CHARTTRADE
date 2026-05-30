@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cfetch } from "~/server/services/http";
+
 // Crypto Fear & Greed index from alternative.me (free, no key). A useful
 // cross-asset risk-appetite proxy. Labelled as crypto sentiment in the UI.
 
@@ -23,13 +25,11 @@ let cache: { exp: number; v: FearGreed } | null = null;
 export async function getFearGreed(): Promise<FearGreed | null> {
   if (cache && cache.exp > Date.now()) return cache.v;
 
-  const c = new AbortController();
-  const t = setTimeout(() => c.abort(), 8000);
   try {
-    const res = await fetch("https://api.alternative.me/fng/?limit=30", {
+    const res = await cfetch("https://api.alternative.me/fng/?limit=30", {
       headers: { Accept: "application/json" },
-      next: { revalidate: 1800 },
-      signal: c.signal,
+      revalidate: 1800,
+      timeoutMs: 8000,
     });
     if (!res.ok) throw new Error(`fng ${res.status}`);
     const json = (await res.json()) as FngResp;
@@ -53,7 +53,5 @@ export async function getFearGreed(): Promise<FearGreed | null> {
   } catch (e) {
     console.warn("[fng] failed:", (e as Error).message);
     return null;
-  } finally {
-    clearTimeout(t);
   }
 }

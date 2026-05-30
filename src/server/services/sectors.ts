@@ -5,6 +5,7 @@ import "server-only";
 // SYMBOLS map so we query Yahoo tickers directly here.
 
 import { getCandles } from "~/server/services/yahoo";
+import { cfetch } from "~/server/services/http";
 
 const NASDAQ_UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
@@ -73,13 +74,11 @@ async function fetchNasdaqCloses(ticker: string): Promise<number[]> {
   const url =
     `https://api.nasdaq.com/api/quote/${ticker}/historical` +
     `?assetclass=etf&fromdate=${fmt(from)}&todate=${fmt(to)}&limit=400`;
-  const c = new AbortController();
-  const t = setTimeout(() => c.abort(), 9000);
   try {
-    const res = await fetch(url, {
+    const res = await cfetch(url, {
       headers: { "User-Agent": NASDAQ_UA, Accept: "application/json" },
-      next: { revalidate: 300 },
-      signal: c.signal,
+      revalidate: 300,
+      timeoutMs: 9000,
     });
     if (!res.ok) throw new Error(`nasdaq ${res.status}`);
     const json = (await res.json()) as NasdaqHist;
@@ -93,8 +92,6 @@ async function fetchNasdaqCloses(ticker: string): Promise<number[]> {
   } catch (e) {
     console.warn(`[sectors] nasdaq ${ticker} failed:`, (e as Error).message);
     return [];
-  } finally {
-    clearTimeout(t);
   }
 }
 

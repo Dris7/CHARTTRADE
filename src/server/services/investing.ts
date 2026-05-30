@@ -11,6 +11,8 @@ import "server-only";
 // Symbol IDs are Investing.com's internal numeric pair IDs (stable, can be
 // hard-coded).
 
+import { cfetch } from "~/server/services/http";
+
 export interface InvestingCandle {
   t: number;
   o: number;
@@ -102,10 +104,9 @@ export async function getInvestingHistory(
   const token = "3f17a72b0e0f6d23a8f8b9e6ad3b0e5c";
   const url = `https://tvc6.investing.com/${token}/${now}/56/56/23/history?symbol=${id}&resolution=${resolution}&from=${from}&to=${now}`;
 
-  const c = new AbortController();
-  const t = setTimeout(() => c.abort(), 12000);
   try {
-    const res = await fetch(url, {
+    // 2-min Next.js fetch cache (delayed feed; refresh on Netlify ~30/hr)
+    const res = await cfetch(url, {
       headers: {
         "User-Agent":
           "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
@@ -115,9 +116,8 @@ export async function getInvestingHistory(
         Referer: "https://tvc-invdn-com.investing.com/",
         "Content-Type": "text/plain",
       },
-      // 2-min Next.js fetch cache (delayed feed; refresh on Netlify ~30/hr)
-      next: { revalidate: 120 },
-      signal: c.signal,
+      revalidate: 120,
+      timeoutMs: 12000,
     });
     if (!res.ok) throw new Error(`investing ${res.status}`);
     const text = await res.text();
@@ -138,7 +138,5 @@ export async function getInvestingHistory(
   } catch (e) {
     console.warn(`[investing] ${key} failed:`, (e as Error).message);
     return [];
-  } finally {
-    clearTimeout(t);
   }
 }

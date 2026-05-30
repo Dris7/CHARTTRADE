@@ -5,6 +5,8 @@ import "server-only";
 // Returns JSON: { quotes: [{ last, change, percentageChange, high, low, ... }] }
 // No auth, no key. Used unofficially by many open-source tools.
 
+import { cfetch } from "~/server/services/http";
+
 export interface CmeQuote {
   productId: number;
   symbol: string;
@@ -55,10 +57,9 @@ async function fetchCme(productId: number): Promise<CmeQuote | null> {
   if (cached && cached.exp > Date.now()) return cached.q;
 
   const url = `https://www.cmegroup.com/CmeWS/mvc/Quotes/Future/${productId}/G`;
-  const c = new AbortController();
-  const t = setTimeout(() => c.abort(), 12000);
   try {
-    const res = await fetch(url, {
+    // Shared Next.js data cache across serverless invocations (delayed feed).
+    const res = await cfetch(url, {
       headers: {
         "User-Agent":
           "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
@@ -66,9 +67,8 @@ async function fetchCme(productId: number): Promise<CmeQuote | null> {
         "Accept-Language": "en-US,en;q=0.9",
         Referer: `https://www.cmegroup.com/markets/`,
       },
-      // Shared Next.js data cache across serverless invocations (delayed feed).
-      next: { revalidate: 60 },
-      signal: c.signal,
+      revalidate: 60,
+      timeoutMs: 12000,
     });
     if (!res.ok) throw new Error(`CME ${res.status}`);
     const data = (await res.json()) as CmeResp;
@@ -97,8 +97,6 @@ async function fetchCme(productId: number): Promise<CmeQuote | null> {
   } catch (e) {
     console.warn(`[cme] ${productId} failed:`, (e as Error).message);
     return null;
-  } finally {
-    clearTimeout(t);
   }
 }
 

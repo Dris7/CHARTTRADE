@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cfetch } from "~/server/services/http";
+
 // Central Bank Watch — Fed + ECB press-release RSS, merged and tagged. No key.
 
 export interface CbItem {
@@ -55,13 +57,11 @@ async function fetchFeed(
   url: string,
   source: CbItem["source"],
 ): Promise<CbItem[]> {
-  const c = new AbortController();
-  const t = setTimeout(() => c.abort(), 9000);
   try {
-    const res = await fetch(url, {
+    const res = await cfetch(url, {
       headers: { "User-Agent": UA, Accept: "application/rss+xml,text/xml,*/*" },
-      next: { revalidate: 1800 },
-      signal: c.signal,
+      revalidate: 1800,
+      timeoutMs: 9000,
     });
     if (!res.ok) throw new Error(`${source} ${res.status}`);
     const xml = await res.text();
@@ -88,8 +88,6 @@ async function fetchFeed(
   } catch (e) {
     console.warn(`[cb] ${source} failed:`, (e as Error).message);
     return [];
-  } finally {
-    clearTimeout(t);
   }
 }
 

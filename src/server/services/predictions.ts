@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cfetch } from "~/server/services/http";
+
 // Prediction markets — macro questions from Polymarket (free gamma API, no key).
 // We search a curated set of macro topics, dedupe by event, and surface the
 // implied probability + volume. Polymarket has deep, liquid macro markets
@@ -98,13 +100,11 @@ async function search(q: string): Promise<GammaEvent[]> {
   const url = `https://gamma-api.polymarket.com/public-search?q=${encodeURIComponent(
     q,
   )}&limit_per_type=4&events_status=active`;
-  const c = new AbortController();
-  const t = setTimeout(() => c.abort(), 8000);
   try {
-    const res = await fetch(url, {
+    const res = await cfetch(url, {
       headers: { Accept: "application/json" },
-      next: { revalidate: 600 },
-      signal: c.signal,
+      revalidate: 600,
+      timeoutMs: 8000,
     });
     if (!res.ok) throw new Error(`polymarket ${res.status}`);
     const json = (await res.json()) as { events?: GammaEvent[] };
@@ -112,8 +112,6 @@ async function search(q: string): Promise<GammaEvent[]> {
   } catch (e) {
     console.warn(`[predictions] "${q}" failed:`, (e as Error).message);
     return [];
-  } finally {
-    clearTimeout(t);
   }
 }
 

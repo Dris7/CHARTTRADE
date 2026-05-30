@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cfetch } from "~/server/services/http";
+
 // Economic calendar. Primary source is ForexFactory's own calendar page, whose
 // embedded `calendarComponentStates` blob carries actual / forecast / previous
 // prints plus their better-or-worse flag. If the scrape is blocked we fall back
@@ -194,10 +196,8 @@ async function fetchFfWeek(week: "this" | "next"): Promise<EconEvent[]> {
     week === "next"
       ? "https://www.forexfactory.com/calendar?week=next"
       : "https://www.forexfactory.com/calendar";
-  const c = new AbortController();
-  const t = setTimeout(() => c.abort(), 9000);
   try {
-    const res = await fetch(url, {
+    const res = await cfetch(url, {
       headers: {
         "User-Agent": UA,
         Accept: "text/html,application/xhtml+xml,*/*",
@@ -205,8 +205,8 @@ async function fetchFfWeek(week: "this" | "next"): Promise<EconEvent[]> {
       },
       // The page only refreshes a few times an hour; cache it on the shared
       // Next.js data cache (Netlify Blobs on prod).
-      next: { revalidate: 900 },
-      signal: c.signal,
+      revalidate: 900,
+      timeoutMs: 9000,
     });
     if (!res.ok) throw new Error(`ff ${res.status}`);
     const html = await res.text();
@@ -216,8 +216,6 @@ async function fetchFfWeek(week: "this" | "next"): Promise<EconEvent[]> {
   } catch (e) {
     console.warn(`[calendar] ff ${week} failed:`, (e as Error).message);
     return [];
-  } finally {
-    clearTimeout(t);
   }
 }
 
@@ -239,21 +237,17 @@ async function fetchMirror(): Promise<EconEvent[]> {
   ];
   const batches = await Promise.all(
     urls.map(async (url) => {
-      const c = new AbortController();
-      const t = setTimeout(() => c.abort(), 8000);
       try {
-        const res = await fetch(url, {
+        const res = await cfetch(url, {
           headers: { "User-Agent": UA, Accept: "application/json,*/*" },
-          next: { revalidate: 1800 },
-          signal: c.signal,
+          revalidate: 1800,
+          timeoutMs: 8000,
         });
         if (!res.ok) throw new Error(`mirror ${res.status}`);
         return (await res.json()) as FfRow[];
       } catch (e) {
         console.warn(`[calendar] mirror ${url} failed:`, (e as Error).message);
         return [];
-      } finally {
-        clearTimeout(t);
       }
     }),
   );

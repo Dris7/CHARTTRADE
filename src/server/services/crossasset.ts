@@ -4,6 +4,7 @@ import "server-only";
 // watch for regime shifts. All from FRED daily series + Nasdaq ETF history.
 
 import { getFredSeries, type YieldPoint } from "~/server/services/fred";
+import { cfetch } from "~/server/services/http";
 
 const NASDAQ_UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
@@ -92,13 +93,11 @@ async function nasdaqCloses(ticker: string): Promise<YieldPoint[]> {
   const url =
     `https://api.nasdaq.com/api/quote/${ticker}/historical` +
     `?assetclass=etf&fromdate=${fmt(from)}&todate=${fmt(to)}&limit=400`;
-  const c = new AbortController();
-  const t = setTimeout(() => c.abort(), 9000);
   try {
-    const res = await fetch(url, {
+    const res = await cfetch(url, {
       headers: { "User-Agent": NASDAQ_UA, Accept: "application/json" },
-      next: { revalidate: 1800 },
-      signal: c.signal,
+      revalidate: 1800,
+      timeoutMs: 9000,
     });
     if (!res.ok) throw new Error(`nasdaq ${res.status}`);
     const json = (await res.json()) as {
@@ -118,8 +117,6 @@ async function nasdaqCloses(ticker: string): Promise<YieldPoint[]> {
   } catch (e) {
     console.warn(`[crossasset] nasdaq ${ticker} failed:`, (e as Error).message);
     return [];
-  } finally {
-    clearTimeout(t);
   }
 }
 

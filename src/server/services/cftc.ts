@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cfetch } from "~/server/services/http";
+
 // CFTC Commitments of Traders (COT) — weekly futures positioning.
 // Two public Socrata datasets, no key required:
 //   • Traders in Financial Futures (TFF) — gpe5-46if — treasuries, equity index,
@@ -80,20 +82,14 @@ async function fetchSocrata(
     // 3 weeks × N contracts is plenty to grab latest + prior per contract.
     `&$limit=${codes.length * 4}` +
     `&$select=${encodeURIComponent(select)}`;
-  const c = new AbortController();
-  const t = setTimeout(() => c.abort(), 9000);
-  try {
-    const res = await fetch(url, {
-      headers: { "User-Agent": UA, Accept: "application/json" },
-      // Weekly data — share across serverless invocations for 6h.
-      next: { revalidate: 21600 },
-      signal: c.signal,
-    });
-    if (!res.ok) throw new Error(`cftc ${res.status}`);
-    return (await res.json()) as Record<string, string>[];
-  } finally {
-    clearTimeout(t);
-  }
+  const res = await cfetch(url, {
+    headers: { "User-Agent": UA, Accept: "application/json" },
+    // Weekly data — share across serverless invocations for 6h.
+    revalidate: 21600,
+    timeoutMs: 9000,
+  });
+  if (!res.ok) throw new Error(`cftc ${res.status}`);
+  return (await res.json()) as Record<string, string>[];
 }
 
 function num(v: string | undefined): number {

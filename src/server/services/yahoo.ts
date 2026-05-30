@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cfetch, coalesce } from "~/server/services/http";
+
 const YF_HOSTS = [
   "https://query1.finance.yahoo.com",
   "https://query2.finance.yahoo.com",
@@ -117,28 +119,35 @@ async function yfFetch<T>(path: string, ttlMs: number): Promise<T> {
   const hit = cacheGet<T>(key);
   if (hit) return hit;
 
+  // Coalesce concurrent identical requests so a cold burst hits Yahoo once.
+  return coalesce(key, () => yfFetchUncached<T>(path, key, ttlMs));
+}
+
+async function yfFetchUncached<T>(
+  path: string,
+  key: string,
+  ttlMs: number,
+): Promise<T> {
   await acquire();
   try {
     let lastErr: unknown;
     for (let attempt = 0; attempt < 3; attempt++) {
       const host = YF_HOSTS[hostIdx++ % YF_HOSTS.length]!;
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 4000);
       try {
-        const res = await fetch(`${host}${path}`, {
+        // Shared Next.js data cache (Netlify durable cache on prod) so cold-start
+        // Lambdas reuse a recent response instead of each hitting Yahoo and
+        // tripping the per-IP 429 limit. No AbortSignal — it would disable that
+        // cache; cfetch bounds latency + caps per-host concurrency instead. L1
+        // memCache above still dedupes within a single instance.
+        const res = await cfetch(`${host}${path}`, {
           headers: {
             "User-Agent": UA,
             Accept: "application/json,text/plain,*/*",
             "Accept-Language": "en-US,en;q=0.9",
           },
-          // Shared Next.js data cache (Netlify Blobs on prod) so cold-start
-          // Lambdas reuse a recent response instead of each hitting Yahoo and
-          // tripping the per-IP 429 limit. L1 memCache above still dedupes
-          // within a single instance.
-          next: { revalidate: 30 },
-          signal: controller.signal,
+          revalidate: 30,
+          timeoutMs: 4000,
         });
-        clearTimeout(timer);
         if (res.status === 429) {
           await new Promise((r) => setTimeout(r, 500 + attempt * 800));
           lastErr = new Error("yahoo 429");
@@ -152,7 +161,6 @@ async function yfFetch<T>(path: string, ttlMs: number): Promise<T> {
         cacheSet(key, json, ttlMs);
         return json;
       } catch (e) {
-        clearTimeout(timer);
         lastErr = e;
       }
     }
