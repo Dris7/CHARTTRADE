@@ -11,10 +11,10 @@ export function PredictionMarkets() {
   return (
     <Panel
       title="Prediction Markets"
-      hint={isLoading ? "loading…" : "Polymarket · macro"}
+      hint={isLoading ? "chargement…" : "Polymarket · macro"}
       right={
         <span className="text-[10px] uppercase tracking-widest text-(--color-fg-mute)">
-          implied odds
+          probabilité implicite
         </span>
       }
     >
@@ -56,7 +56,7 @@ export function PredictionMarkets() {
               <div className="flex items-center justify-between text-[9px] text-(--color-fg-mute)">
                 <span className="truncate">{p.outcomeLabel}</span>
                 <span className="tabular shrink-0">
-                  ${fmtVol(p.volume)} vol{p.endDate ? ` · ${p.endDate}` : ""}
+                  {fmtVol(p.volume)} $ vol.{p.endDate ? ` · ${p.endDate}` : ""}
                 </span>
               </div>
             </li>
@@ -64,7 +64,7 @@ export function PredictionMarkets() {
         })}
         {!isLoading && (data?.length ?? 0) === 0 && (
           <li className="py-6 text-center text-sm text-(--color-fg-mute)">
-            Prediction feed unavailable.
+            Flux de prédiction indisponible.
           </li>
         )}
       </ul>

@@ -14,19 +14,19 @@ export function YieldMonitor({ compact = false }: { compact?: boolean }) {
   return (
     <Panel
       title="Yield Monitor"
-      hint="FRED · daily close"
+      hint="FRED · clôture quotidienne"
       noPad
     >
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead className="text-[10px] uppercase tracking-widest text-(--color-fg-mute)">
             <tr className="border-b border-(--color-border)">
-              <th className="px-3 py-2 text-left font-medium">Tenor</th>
-              <th className="px-3 py-2 text-right font-medium">Last</th>
-              <th className="px-3 py-2 text-right font-medium">1d</th>
-              <th className="px-3 py-2 text-right font-medium">1w</th>
+              <th className="px-3 py-2 text-left font-medium">Échéance</th>
+              <th className="px-3 py-2 text-right font-medium">Dernier</th>
+              <th className="px-3 py-2 text-right font-medium">1j</th>
+              <th className="px-3 py-2 text-right font-medium">1sem</th>
               {!compact && (
-                <th className="px-3 py-2 text-right font-medium">1m</th>
+                <th className="px-3 py-2 text-right font-medium">1mois</th>
               )}
             </tr>
           </thead>
@@ -34,7 +34,7 @@ export function YieldMonitor({ compact = false }: { compact?: boolean }) {
             {isLoading && (
               <tr>
                 <td colSpan={5} className="px-3 py-4 text-(--color-fg-mute)">
-                  loading…
+                  chargement…
                 </td>
               </tr>
             )}

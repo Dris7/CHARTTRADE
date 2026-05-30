@@ -25,13 +25,13 @@ export function FinancialStress() {
   return (
     <Panel
       title="Financial Stress"
-      hint={isLoading ? "loading…" : data?.date ? `STLFSI4 · ${data.date}` : "feed unavailable"}
+      hint={isLoading ? "chargement…" : data?.date ? `STLFSI4 · ${data.date}` : "flux indisponible"}
     >
       {isLoading ? (
         <div className="h-24 animate-pulse rounded-sm bg-(--color-panel-2)/60" />
       ) : v == null ? (
         <div className="py-6 text-center text-sm text-(--color-fg-mute)">
-          FRED feed unavailable.
+          Flux FRED indisponible.
         </div>
       ) : (
         <div className="flex flex-col gap-3">
@@ -42,7 +42,7 @@ export function FinancialStress() {
                 {v.toFixed(2)}
               </div>
               <div className={`text-[11px] uppercase tracking-widest ${TONE[cls]}`}>
-                {cls} stress
+                stress {cls}
               </div>
             </div>
             <Spark
@@ -73,14 +73,14 @@ export function FinancialStress() {
               />
             </div>
             <div className="mt-1 flex justify-between text-[9px] text-(--color-fg-mute)">
-              <span>calm</span>
-              <span>0 = avg</span>
-              <span>crisis</span>
+              <span>calme</span>
+              <span>0 = moyenne</span>
+              <span>crise</span>
             </div>
           </div>
           <p className="text-[10px] text-(--color-fg-mute)">
-            St. Louis Fed composite of 18 yield-spread, vol &amp; rate series. Positive =
-            above-average market stress.
+            Composite de la Fed de St. Louis sur 18 séries de spreads de taux, vol &amp; taux. Positif =
+            stress de marché supérieur à la moyenne.
           </p>
         </div>
       )}

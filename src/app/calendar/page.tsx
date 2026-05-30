@@ -10,10 +10,10 @@ import { type Impact } from "~/server/api/routers/calendar";
 const IMPACTS: Impact[] = ["high", "medium", "low", "holiday"];
 
 const IMPACT_META: Record<Impact, { color: string; label: string }> = {
-  high: { color: "bg-(--color-down)", label: "High" },
-  medium: { color: "bg-(--color-warn)", label: "Med" },
-  low: { color: "bg-(--color-fg-mute)", label: "Low" },
-  holiday: { color: "bg-(--color-accent-2)", label: "Holiday" },
+  high: { color: "bg-(--color-down)", label: "Élevé" },
+  medium: { color: "bg-(--color-warn)", label: "Moyen" },
+  low: { color: "bg-(--color-fg-mute)", label: "Faible" },
+  holiday: { color: "bg-(--color-accent-2)", label: "Férié" },
 };
 
 const FLAG: Record<string, string> = {
@@ -29,10 +29,10 @@ const FLAG: Record<string, string> = {
 };
 
 const RANGES = [
-  { id: "today", label: "Today", days: 1 },
-  { id: "week", label: "This week", days: 7 },
-  { id: "2w", label: "14d", days: 14 },
-  { id: "month", label: "30d", days: 30 },
+  { id: "today", label: "Aujourd’hui", days: 1 },
+  { id: "week", label: "Cette semaine", days: 7 },
+  { id: "2w", label: "14j", days: 14 },
+  { id: "month", label: "30j", days: 30 },
 ] as const;
 type RangeId = (typeof RANGES)[number]["id"];
 
@@ -147,9 +147,9 @@ export default function CalendarPage() {
     <div className="mx-auto flex max-w-[1600px] flex-col gap-4 p-4">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <div className="label">Economic Calendar</div>
+          <div className="label">Calendrier économique</div>
           <h1 className="display text-3xl">
-            Catalysts ahead ·{" "}
+            Catalyseurs à venir ·{" "}
             <span className="text-(--color-fg-mute)">
               {RANGES.find((r) => r.id === rangeId)?.label.toLowerCase()}
             </span>
@@ -159,7 +159,7 @@ export default function CalendarPage() {
           <span
             className={`size-1.5 rounded-full ${live ? "bg-(--color-up)" : "bg-(--color-warn)"}`}
           />
-          {live ? "ForexFactory feed · UTC" : "curated fallback · UTC"}
+          {live ? "Flux ForexFactory · UTC" : "données de secours · UTC"}
         </div>
       </div>
 
@@ -167,7 +167,7 @@ export default function CalendarPage() {
       <div className="flex flex-col gap-3 rounded-md border border-(--color-border) bg-(--color-panel)/60 p-3">
         <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
           {/* Range */}
-          <FilterCluster label="Range">
+          <FilterCluster label="Période">
             {RANGES.map((r) => (
               <Chip
                 key={r.id}
@@ -195,11 +195,11 @@ export default function CalendarPage() {
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Search events…"
+              placeholder="Rechercher des événements…"
               className="w-40 bg-transparent text-xs text-(--color-fg) placeholder:text-(--color-fg-mute) focus:outline-none"
             />
             {q && (
-              <button onClick={() => setQ("")} aria-label="clear search">
+              <button onClick={() => setQ("")} aria-label="effacer la recherche">
                 <X size={12} className="text-(--color-fg-mute) hover:text-(--color-fg)" />
               </button>
             )}
@@ -208,10 +208,10 @@ export default function CalendarPage() {
 
         {/* Country chips */}
         {countryOptions.length > 0 && (
-          <FilterCluster label="Region">
+          <FilterCluster label="Région">
             {countries.size > 0 && (
               <Chip active={false} onClick={() => setCountries(new Set())}>
-                <X size={11} /> Clear
+                <X size={11} /> Effacer
               </Chip>
             )}
             {countryOptions.map((c) => (
@@ -232,7 +232,7 @@ export default function CalendarPage() {
           <FilterCluster label="Type">
             {categories.size > 0 && (
               <Chip active={false} onClick={() => setCategories(new Set())}>
-                <X size={11} /> Clear
+                <X size={11} /> Effacer
               </Chip>
             )}
             {categoryOptions.map((c) => (
@@ -250,7 +250,7 @@ export default function CalendarPage() {
 
       <Panel
         noPad
-        hint={isLoading ? "loading…" : `${filtered.length} events`}
+        hint={isLoading ? "chargement…" : `${filtered.length} événements`}
       >
         <div className="flex flex-col">
           {grouped.map(([date, events]) => (
@@ -262,7 +262,7 @@ export default function CalendarPage() {
                 </span>
                 {date === todayStr && (
                   <span className="rounded-sm bg-(--color-accent)/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-widest text-(--color-accent)">
-                    Today
+                    Aujourd’hui
                   </span>
                 )}
                 <span className="ml-auto text-[10px] text-(--color-fg-mute)">
@@ -283,7 +283,7 @@ export default function CalendarPage() {
           ))}
           {!isLoading && grouped.length === 0 && (
             <div className="py-12 text-center text-sm text-(--color-fg-mute)">
-              No events match these filters.
+              Aucun événement ne correspond à ces filtres.
             </div>
           )}
         </div>
@@ -325,7 +325,7 @@ function EventRow({
           aria-hidden
         />
         <span className="tabular text-(--color-fg)">
-          {e.time || "All day"}
+          {e.time || "Toute la journée"}
         </span>
       </div>
 
@@ -346,10 +346,10 @@ function EventRow({
       {/* actual (only when a source provides it) / forecast / previous */}
       <div className="tabular flex shrink-0 items-center gap-4 text-right text-[11px]">
         {showActual && (
-          <Stat label="act" value={e.actual} tone={trendTone(e.actualTrend)} />
+          <Stat label="réel" value={e.actual} tone={trendTone(e.actualTrend)} />
         )}
-        <Stat label="fcst" value={e.forecast} />
-        <Stat label="prev" value={e.previous} muted />
+        <Stat label="prév" value={e.forecast} />
+        <Stat label="préc" value={e.previous} muted />
       </div>
     </li>
   );
@@ -440,14 +440,14 @@ function startOfUtcDay(ts: number): number {
 }
 
 function fmtLongDate(d: string): string {
-  return new Date(`${d}T00:00:00Z`).toLocaleDateString("en-US", {
+  return new Date(`${d}T00:00:00Z`).toLocaleDateString("fr-FR", {
     month: "long",
     day: "numeric",
     timeZone: "UTC",
   });
 }
 function fmtDow(d: string): string {
-  return new Date(`${d}T00:00:00Z`).toLocaleDateString("en-US", {
+  return new Date(`${d}T00:00:00Z`).toLocaleDateString("fr-FR", {
     weekday: "long",
     timeZone: "UTC",
   });

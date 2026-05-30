@@ -71,12 +71,12 @@ export function classifyMeta(
   const spread = max - min;
 
   if (spread < 1.0 && Math.abs(scoreSigma) < 0.4) {
-    return { meta: "STABLE", note: "Cross-asset signals aligned" };
+    return { meta: "STABLE", note: "Signaux cross-asset alignés" };
   }
   if (spread > 2.5) {
-    return { meta: "TRANSITION", note: "Pillars diverging — regime in flux" };
+    return { meta: "TRANSITION", note: "Piliers divergents — régime en flux" };
   }
-  return { meta: "MIXED", note: "Cross-asset signals mixed" };
+  return { meta: "MIXED", note: "Signaux cross-asset mitigés" };
 }
 
 export function formatDisplay(

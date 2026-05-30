@@ -15,6 +15,8 @@ const checks = [
     page: "/",
     name: "dashboard",
     panels: [
+      { title: "Daily Macro Brief", mustInclude: ["regime"] },
+      { title: "Regime Trajectory", mustInclude: ["analog"] },
       { title: "Macro Stress", mustInclude: ["VIX", "VIXCLS"] },
       { title: "Financial Stress", mustInclude: ["STLFSI4"] },
     ],
@@ -24,6 +26,8 @@ const checks = [
     name: "bonds",
     panels: [
       { title: "Yield Curve", mustInclude: ["2s10s"] },
+      { title: "Real Rates", mustInclude: ["DFII10"] },
+      { title: "Net Liquidity", mustInclude: ["WALCL"] },
       { title: "Central Bank Watch", mustInclude: ["Fed"] },
     ],
   },
@@ -40,6 +44,7 @@ const checks = [
     name: "intermarket",
     panels: [
       { title: "CFTC Positioning", mustInclude: ["10-Year"] },
+      { title: "Cross-Asset Correlations", mustInclude: ["Stock"] },
       { title: "Prediction Markets", mustInclude: [] },
     ],
   },

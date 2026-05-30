@@ -228,8 +228,8 @@ export function ChartPanel({
             value={style}
             onChange={setStyle}
             options={[
-              { v: "area", l: "Area" },
-              { v: "candles", l: "Candles" },
+              { v: "area", l: "Aire" },
+              { v: "candles", l: "Bougies" },
             ]}
           />
           <ToggleGroup
@@ -269,7 +269,7 @@ export function ChartPanel({
             <div className="z-10 flex items-center gap-2 rounded-sm border border-(--color-warn)/40 bg-(--color-bg)/80 px-3 py-1.5 backdrop-blur-sm">
               <TriangleAlert size={13} className="text-(--color-warn)" />
               <span className="text-[11px] font-medium uppercase tracking-widest text-(--color-warn)">
-                Simulated — live feed unavailable
+                Simulé — flux en direct indisponible
               </span>
             </div>
           </div>
@@ -286,15 +286,15 @@ function isIntraday(interval: Interval): boolean {
 function sourceLabelFor(source: string | undefined): string {
   switch (source) {
     case "investing":
-      return "Investing.com · delayed";
+      return "Investing.com · différé";
     case "coingecko":
       return "CoinGecko · 24h";
     case "stooq":
       return "Stooq · EOD";
     case "yahoo":
-      return "Yahoo · delayed";
+      return "Yahoo · différé";
     case "none":
-      return "feed throttled · synthetic";
+      return "flux limité · synthétique";
     default:
       return "";
   }

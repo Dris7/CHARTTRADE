@@ -12,10 +12,10 @@ export function MacroStress() {
   return (
     <Panel
       title="Macro Stress"
-      hint={isLoading ? "loading…" : "FRED · latest prints"}
+      hint={isLoading ? "chargement…" : "FRED · derniers relevés"}
       right={
         <span className="text-[10px] uppercase tracking-widest text-(--color-fg-mute)">
-          rates · vol · credit · labor
+          taux · vol · crédit · emploi
         </span>
       }
     >
@@ -62,7 +62,7 @@ export function MacroStress() {
       </div>
       {!isLoading && (data?.length ?? 0) === 0 && (
         <div className="py-6 text-center text-sm text-(--color-fg-mute)">
-          FRED feed unavailable.
+          Flux FRED indisponible.
         </div>
       )}
     </Panel>

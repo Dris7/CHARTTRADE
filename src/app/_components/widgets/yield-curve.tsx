@@ -72,7 +72,7 @@ export function YieldCurve() {
   return (
     <Panel
       title="Yield Curve"
-      hint={isLoading ? "loading…" : data?.date ? `UST · ${data.date}` : "feed unavailable"}
+      hint={isLoading ? "chargement…" : data?.date ? `UST · ${data.date}` : "flux indisponible"}
       right={
         spread != null ? (
           <span
@@ -83,7 +83,7 @@ export function YieldCurve() {
             }`}
           >
             2s10s {spread >= 0 ? "+" : ""}
-            {(spread * 100).toFixed(0)}bp {inverted ? "· inverted" : ""}
+            {(spread * 100).toFixed(0)}bp {inverted ? "· inversée" : ""}
           </span>
         ) : null
       }
@@ -92,7 +92,7 @@ export function YieldCurve() {
         <div className="h-[150px] animate-pulse rounded-sm bg-(--color-panel-2)/60" />
       ) : pts.length < 2 ? (
         <div className="py-10 text-center text-sm text-(--color-fg-mute)">
-          FRED feed unavailable.
+          Flux FRED indisponible.
         </div>
       ) : (
         <svg viewBox={`0 0 ${W} ${H}`} width="100%" className="block">

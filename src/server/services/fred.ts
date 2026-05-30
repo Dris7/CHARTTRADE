@@ -484,3 +484,113 @@ export async function getFinancialStress(): Promise<FinancialStress> {
     classification,
   };
 }
+
+// --- net liquidity panel ----------------------------------------------------
+
+export interface NetLiquidity {
+  value: number | null; // $T
+  change1m: number | null; // $T over ~4 weeks
+  date: string;
+  series: Array<{ date: string; value: number }>; // weekly, last ~2y
+}
+
+export async function getNetLiquidity(): Promise<NetLiquidity> {
+  const s = await getNetLiquiditySeries();
+  if (s.length === 0)
+    return { value: null, change1m: null, date: "", series: [] };
+  const last = s[s.length - 1]!;
+  const prior = s[s.length - 5] ?? s[0]!; // ~4 weeks back
+  const trimmed = s.slice(-104);
+  return {
+    value: last.value,
+    change1m: last.value - prior.value,
+    date: last.date,
+    series: trimmed,
+  };
+}
+
+// --- real rates & inflation tiles -------------------------------------------
+
+const REAL_RATE_SPECS: Array<{ key: string; label: string; fred: string }> = [
+  { key: "real10", label: "10Y Real", fred: "DFII10" },
+  { key: "real5", label: "5Y Real", fred: "DFII5" },
+  { key: "be10", label: "10Y Breakeven", fred: "T10YIE" },
+  { key: "be5y5y", label: "5y5y Fwd Infl", fred: "T5YIFR" },
+];
+
+export interface RealRate {
+  key: string;
+  label: string;
+  fred: string;
+  value: number | null;
+  change: number | null;
+  date: string;
+  spark: number[];
+}
+
+export async function getRealRates(): Promise<RealRate[]> {
+  return Promise.all(
+    REAL_RATE_SPECS.map(async (spec): Promise<RealRate> => {
+      const s = await getFredSeries(spec.fred);
+      if (s.length === 0)
+        return { ...spec, value: null, change: null, date: "", spark: [] };
+      const value = s[s.length - 1]!.value;
+      const prev = s[s.length - 2]?.value ?? value;
+      return {
+        ...spec,
+        value,
+        change: value - prev,
+        date: s[s.length - 1]!.date,
+        spark: downsample(s.slice(-90).map((p) => p.value)),
+      };
+    }),
+  );
+}
+
+// --- rate volatility (realized, MOVE substitute) ----------------------------
+
+export interface RateVol {
+  value: number | null; // annualized realized 10Y vol, in bp
+  date: string;
+  spark: number[];
+  classification: "Low" | "Normal" | "Elevated" | "High";
+  percentile: number | null; // vs trailing window
+}
+
+export async function getRateVol(): Promise<RateVol> {
+  // Realized 10Y yield volatility: stdev of daily yield changes (pct pts),
+  // annualized (×√252) and expressed in basis points. A keyless proxy for MOVE.
+  const s = await getFredSeries("DGS10");
+  if (s.length < 25) {
+    return { value: null, date: "", spark: [], classification: "Normal", percentile: null };
+  }
+  const vals = s.map((p) => p.value);
+  const dailyChg: number[] = [];
+  for (let i = 1; i < vals.length; i++) dailyChg.push(vals[i]! - vals[i - 1]!);
+
+  // rolling 20d annualized vol in bp
+  const W = 20;
+  const volSeries: number[] = [];
+  for (let i = W - 1; i < dailyChg.length; i++) {
+    const win = dailyChg.slice(i - W + 1, i + 1);
+    const mean = win.reduce((a, b) => a + b, 0) / win.length;
+    const variance = win.reduce((a, b) => a + (b - mean) ** 2, 0) / win.length;
+    volSeries.push(Math.sqrt(variance) * Math.sqrt(252) * 100); // → bp
+  }
+  if (volSeries.length === 0) {
+    return { value: null, date: "", spark: [], classification: "Normal", percentile: null };
+  }
+  const value = volSeries[volSeries.length - 1]!;
+  const recent = volSeries.slice(-252);
+  const below = recent.filter((v) => v <= value).length;
+  const percentile = (below / recent.length) * 100;
+  const classification =
+    percentile < 25 ? "Low" : percentile < 60 ? "Normal" : percentile < 85 ? "Elevated" : "High";
+  return {
+    value,
+    date: s[s.length - 1]!.date,
+    spark: downsample(volSeries.slice(-90)),
+    classification,
+    percentile,
+  };
+}

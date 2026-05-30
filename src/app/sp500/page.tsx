@@ -10,7 +10,7 @@ export default function SP500Page() {
         <div className="label">SP500 Terminal</div>
         <h1 className="display text-3xl">
           Appétit au risque ·{" "}
-          <span className="text-(--color-fg-mute)">equity flow</span>
+          <span className="text-(--color-fg-mute)">flux actions</span>
         </h1>
       </div>
 

@@ -22,21 +22,21 @@ export function EventStrip() {
 
   return (
     <Panel
-      title="Next 14 days"
+      title="14 prochains jours"
       right={
         <Link
           href="/calendar"
           className="flex items-center gap-1 text-[11px] text-(--color-fg-dim) hover:text-(--color-fg)"
         >
           <CalendarDays size={12} />
-          Full calendar
+          Calendrier complet
           <ArrowRight size={11} />
         </Link>
       }
     >
       <ul className="flex flex-col">
         {isLoading && (
-          <li className="py-2 text-xs text-(--color-fg-mute)">loading…</li>
+          <li className="py-2 text-xs text-(--color-fg-mute)">chargement…</li>
         )}
         {(data ?? []).slice(0, 6).map((e) => (
           <li
@@ -61,8 +61,8 @@ export function EventStrip() {
               </div>
               <div className="text-[10px] text-(--color-fg-mute)">
                 {e.country} · {e.category}
-                {e.forecast ? ` · fcst ${e.forecast}` : ""}
-                {e.previous ? ` · prev ${e.previous}` : ""}
+                {e.forecast ? ` · prév ${e.forecast}` : ""}
+                {e.previous ? ` · préc ${e.previous}` : ""}
               </div>
             </div>
           </li>
@@ -74,7 +74,7 @@ export function EventStrip() {
 
 function fmtDate(d: string): string {
   const date = new Date(`${d}T00:00:00Z`);
-  return date.toLocaleDateString("en-US", {
+  return date.toLocaleDateString("fr-FR", {
     month: "short",
     day: "numeric",
     timeZone: "UTC",

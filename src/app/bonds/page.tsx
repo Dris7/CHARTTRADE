@@ -1,5 +1,7 @@
 import { CentralBankWatch } from "~/app/_components/widgets/central-bank-watch";
 import { ChartPanel } from "~/app/_components/widgets/chart-panel";
+import { NetLiquidity } from "~/app/_components/widgets/net-liquidity";
+import { RealRates } from "~/app/_components/widgets/real-rates";
 import { SpotlightTile } from "~/app/_components/widgets/spotlight-tile";
 import { YieldCurve } from "~/app/_components/widgets/yield-curve";
 import { YieldMonitor } from "~/app/_components/widgets/yield-monitor";
@@ -10,7 +12,7 @@ export default function BondsPage() {
       <div className="flex flex-col gap-1">
         <div className="label">Bonds Terminal</div>
         <h1 className="display text-3xl">
-          Cerveau macro · <span className="text-(--color-fg-mute)">rates first</span>
+          Cerveau macro · <span className="text-(--color-fg-mute)">les taux d&apos;abord</span>
         </h1>
       </div>
 
@@ -40,17 +42,21 @@ export default function BondsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.6fr_1fr]">
-        <ChartPanel
-          symbolKey="ZN"
-          title="ZN · 10Y T-Note"
-          subtitle="US 10Y future"
-          defaultRange="3mo"
-          defaultStyle="candles"
-          height={380}
-        />
+      <RealRates />
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <NetLiquidity />
         <CentralBankWatch />
       </div>
+
+      <ChartPanel
+        symbolKey="ZN"
+        title="ZN · 10Y T-Note"
+        subtitle="US 10Y future"
+        defaultRange="3mo"
+        defaultStyle="candles"
+        height={380}
+      />
     </div>
   );
 }

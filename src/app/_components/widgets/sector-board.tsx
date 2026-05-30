@@ -26,12 +26,12 @@ export function SectorBoard() {
   return (
     <Panel
       title="Sector Heatmap"
-      hint={isLoading ? "loading…" : "S&P SPDR sectors · daily"}
+      hint={isLoading ? "chargement…" : "secteurs S&P SPDR · quotidien"}
       right={
         breadth ? (
           <div className="flex items-center gap-3 text-[10px]">
-            <BreadthPill label="&gt;50d" pct={breadth.above50Pct} />
-            <BreadthPill label="&gt;200d" pct={breadth.above200Pct} />
+            <BreadthPill label="&gt;50j" pct={breadth.above50Pct} />
+            <BreadthPill label="&gt;200j" pct={breadth.above200Pct} />
           </div>
         ) : null
       }
@@ -47,7 +47,7 @@ export function SectorBoard() {
             className={`flex flex-col items-center justify-center gap-0.5 rounded-sm px-1 py-2 ${heatTone(
               s.changePct,
             )}`}
-            title={`${s.name}${s.above50 != null ? ` · ${s.above50 ? "above" : "below"} 50d` : ""}`}
+            title={`${s.name}${s.above50 != null ? ` · ${s.above50 ? "au-dessus" : "en dessous"} 50j` : ""}`}
           >
             <span className="text-[11px] font-semibold">{s.ticker}</span>
             <span className="tabular text-[11px]">
@@ -63,14 +63,14 @@ export function SectorBoard() {
       </div>
       {!isLoading && (data?.sectors.length ?? 0) === 0 && (
         <div className="py-6 text-center text-sm text-(--color-fg-mute)">
-          Sector feed unavailable.
+          Flux des secteurs indisponible.
         </div>
       )}
       {breadth && (
         <p className="mt-2 text-[10px] text-(--color-fg-mute)">
-          Breadth proxy: {breadth.counted}/{breadth.total} sectors with sufficient
-          history. {breadth.above50Pct.toFixed(0)}% above their 50-day, {" "}
-          {breadth.above200Pct.toFixed(0)}% above 200-day SMA.
+          Indicateur de largeur : {breadth.counted}/{breadth.total} secteurs avec un
+          historique suffisant. {breadth.above50Pct.toFixed(0)}% au-dessus de leur MM 50j, {" "}
+          {breadth.above200Pct.toFixed(0)}% au-dessus de la MM 200j.
         </p>
       )}
     </Panel>

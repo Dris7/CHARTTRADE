@@ -53,7 +53,7 @@ export function SpotlightTile({
             href={href}
             className="flex items-center gap-1 rounded-sm border border-(--color-border) px-2 py-1 text-[10px] text-(--color-fg-dim) opacity-0 transition group-hover:opacity-100 hover:text-(--color-fg)"
           >
-            Open <ArrowUpRight size={10} />
+            Ouvrir <ArrowUpRight size={10} />
           </Link>
         )}
       </div>
@@ -75,7 +75,7 @@ export function SpotlightTile({
       </div>
       <div className="mt-3 flex items-center justify-between border-t border-(--color-border) px-4 py-2 text-[10px] uppercase tracking-widest text-(--color-fg-mute)">
         <span>1M</span>
-        <span>session</span>
+        <span>séance</span>
       </div>
     </div>
   );

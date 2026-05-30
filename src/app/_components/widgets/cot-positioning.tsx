@@ -6,11 +6,11 @@ import { api } from "~/trpc/react";
 import { Panel } from "~/app/_components/ui/panel";
 
 const GROUP_LABEL: Record<string, string> = {
-  rates: "Rates",
-  equity: "Equity Index",
+  rates: "Taux",
+  equity: "Indices actions",
   fx: "FX",
-  metals: "Metals",
-  energy: "Energy",
+  metals: "Métaux",
+  energy: "Énergie",
 };
 const GROUP_ORDER = ["rates", "equity", "fx", "metals", "energy"];
 
@@ -38,10 +38,10 @@ export function CotPositioning() {
       title="CFTC Positioning"
       hint={
         isLoading
-          ? "loading…"
+          ? "chargement…"
           : reportDate
-            ? `COT · report ${reportDate}`
-            : "feed unavailable"
+            ? `COT · rapport ${reportDate}`
+            : "flux indisponible"
       }
       right={
         <span className="text-[10px] uppercase tracking-widest text-(--color-fg-mute)">
@@ -58,8 +58,8 @@ export function CotPositioning() {
               </span>
               <span className="text-[9px] text-(--color-fg-mute)">
                 {group === "metals" || group === "energy"
-                  ? "managed money"
-                  : "asset managers"}
+                  ? "fonds spéculatifs"
+                  : "gérants d'actifs"}
               </span>
             </div>
             <ul className="flex flex-col gap-1.5">
@@ -80,7 +80,7 @@ export function CotPositioning() {
 
         {!isLoading && grouped.length === 0 && (
           <div className="py-6 text-center text-sm text-(--color-fg-mute)">
-            COT feed unavailable.
+            Flux COT indisponible.
           </div>
         )}
       </div>
@@ -132,7 +132,7 @@ function PosBar({
             style={{
               left: `${50 + Math.max(-50, Math.min(50, row.levMoneyNetPct / 2))}%`,
             }}
-            title={`Leveraged funds: ${fmtPct(row.levMoneyNetPct)}`}
+            title={`Fonds à effet de levier : ${fmtPct(row.levMoneyNetPct)}`}
           />
         )}
       </div>
@@ -152,7 +152,7 @@ function PosBar({
                 ? "text-(--color-up)/70"
                 : "text-(--color-down)/70"
             }`}
-            title="Week-over-week change in net contracts"
+            title="Variation hebdomadaire des contrats nets"
           >
             {row.netChange1w > 0 ? "▲" : "▼"}
           </span>

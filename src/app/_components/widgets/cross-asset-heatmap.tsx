@@ -35,7 +35,7 @@ export function CrossAssetHeatmap() {
   });
 
   return (
-    <Panel title="Cross-Asset Today" hint="Δ vs prev close">
+    <Panel title="Cross-Asset Today" hint="Δ vs clôture préc.">
       {isLoading ? (
         <div className="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-4">
           {SET.map((s) => (

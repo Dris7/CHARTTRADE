@@ -13,10 +13,10 @@ const LABEL_TONE: Record<string, string> = {
 };
 
 const LABEL_TAG: Record<string, string> = {
-  "Risk-On": "Equities + risk assets bid",
-  "Risk-Off": "Defensives + bonds bid",
-  Neutral: "Cross-asset mixed signals",
-  Mixed: "Conflicted regime",
+  "Risk-On": "Actions + actifs risqués recherchés",
+  "Risk-Off": "Défensifs + obligations recherchés",
+  Neutral: "Signaux cross-asset mitigés",
+  Mixed: "Régime conflictuel",
 };
 
 const META_TONE: Record<string, string> = {
@@ -51,7 +51,7 @@ export function RegimeHero() {
           <div>
             <div className="flex items-center gap-2 pb-2">
               <span className="pulse" />
-              <span className="label">Current Regime</span>
+              <span className="label">Régime actuel</span>
               {r && (
                 <span
                   className={`ml-1 rounded-sm border px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest ${META_TONE[r.meta] ?? ""}`}
@@ -73,13 +73,13 @@ export function RegimeHero() {
                     {fmtSigma(r.scoreSigma)}σ
                   </span>
                   <span className="text-[10px] uppercase tracking-widest text-(--color-fg-mute)">
-                    weighted z · 60d
+                    z pondéré · 60j
                   </span>
                 </div>
               )}
             </div>
             <p className="mt-2 text-sm text-(--color-fg-dim)">
-              {r ? (LABEL_TAG[r.label] ?? "") : "Sampling cross-asset prints…"}
+              {r ? (LABEL_TAG[r.label] ?? "") : "Échantillonnage des données cross-asset…"}
             </p>
           </div>
 
@@ -164,7 +164,7 @@ export function RegimeHero() {
             <span className="text-xs text-(--color-fg-mute)">σ</span>
           </div>
           <div className="pt-1 text-[11px] uppercase tracking-widest text-(--color-fg-mute)">
-            {r?.label ?? "computing…"}
+            {r?.label ?? "calcul…"}
           </div>
 
           {/* Pillar list */}

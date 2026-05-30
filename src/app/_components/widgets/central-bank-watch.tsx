@@ -24,7 +24,7 @@ export function CentralBankWatch() {
   return (
     <Panel
       title="Central Bank Watch"
-      hint={isLoading ? "loading…" : "Fed · ECB press"}
+      hint={isLoading ? "chargement…" : "communiqués Fed · ECB"}
     >
       <ul className="flex flex-col">
         {isLoading &&
@@ -67,7 +67,7 @@ export function CentralBankWatch() {
         ))}
         {!isLoading && (data?.length ?? 0) === 0 && (
           <li className="py-6 text-center text-sm text-(--color-fg-mute)">
-            Central bank feeds unavailable.
+            Flux des banques centrales indisponibles.
           </li>
         )}
       </ul>
@@ -78,8 +78,8 @@ export function CentralBankWatch() {
 function fmtAgo(ts: number): string {
   const diff = Date.now() - ts;
   const h = Math.floor(diff / 3_600_000);
-  if (h < 1) return "just now";
-  if (h < 24) return `${h}h ago`;
+  if (h < 1) return "à l'instant";
+  if (h < 24) return `il y a ${h}h`;
   const d = Math.floor(h / 24);
-  return `${d}d ago`;
+  return `il y a ${d}j`;
 }

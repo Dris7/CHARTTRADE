@@ -32,13 +32,13 @@ export function FearGreed() {
   return (
     <Panel
       title="Fear & Greed"
-      hint={isLoading ? "loading…" : data?.date ? `crypto · ${data.date}` : "feed unavailable"}
+      hint={isLoading ? "chargement…" : data?.date ? `crypto · ${data.date}` : "flux indisponible"}
     >
       {isLoading ? (
         <div className="h-28 animate-pulse rounded-sm bg-(--color-panel-2)/60" />
       ) : v == null || !t ? (
         <div className="py-6 text-center text-sm text-(--color-fg-mute)">
-          Sentiment feed unavailable.
+          Flux de sentiment indisponible.
         </div>
       ) : (
         <div className="flex items-center gap-4">
@@ -90,7 +90,7 @@ export function FearGreed() {
             </span>
             <Spark data={data?.history ?? []} width={110} height={26} stroke={t.color} />
             <span className="text-[9px] text-(--color-fg-mute)">
-              alternative.me · 30d
+              alternative.me · 30j
             </span>
           </div>
         </div>

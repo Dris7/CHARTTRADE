@@ -23,18 +23,18 @@ const NAV: Array<{
   icon: React.ComponentType<{ className?: string; size?: number }>;
   group: "core" | "terminal" | "tools";
 }> = [
-  { href: "/", label: "Macro Dashboard", icon: Gauge, group: "core" },
-  { href: "/bonds", label: "Bonds Terminal", icon: Activity, group: "terminal" },
-  { href: "/sp500", label: "SP500 Terminal", icon: TrendingUp, group: "terminal" },
+  { href: "/", label: "Tableau macro", icon: Gauge, group: "core" },
+  { href: "/bonds", label: "Terminal Bonds", icon: Activity, group: "terminal" },
+  { href: "/sp500", label: "Terminal SP500", icon: TrendingUp, group: "terminal" },
   { href: "/intermarket", label: "Intermarket", icon: Network, group: "terminal" },
-  { href: "/calendar", label: "Calendar", icon: CalendarDays, group: "tools" },
+  { href: "/calendar", label: "Calendrier", icon: CalendarDays, group: "tools" },
   { href: "/journal", label: "Journal", icon: Notebook, group: "tools" },
 ];
 
 const GROUPS: Array<{ key: "core" | "terminal" | "tools"; label: string }> = [
-  { key: "core", label: "Overview" },
-  { key: "terminal", label: "Terminals" },
-  { key: "tools", label: "Tools" },
+  { key: "core", label: "Aperçu" },
+  { key: "terminal", label: "Terminaux" },
+  { key: "tools", label: "Outils" },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -86,7 +86,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             href="/settings"
             className="flex items-center gap-2 hover:text-(--color-fg)"
           >
-            <Settings size={14} /> Settings
+            <Settings size={14} /> Paramètres
           </Link>
         </div>
       </aside>
@@ -137,15 +137,15 @@ function LiveClock() {
 function pageTitle(pathname: string | null): string {
   switch (true) {
     case pathname === "/":
-      return "Global Macro Dashboard";
+      return "Tableau de bord macro global";
     case pathname?.startsWith("/bonds") ?? false:
-      return "Bonds Terminal";
+      return "Terminal Bonds";
     case pathname?.startsWith("/sp500") ?? false:
-      return "SP500 Terminal";
+      return "Terminal SP500";
     case pathname?.startsWith("/intermarket") ?? false:
-      return "Intermarket Engine";
+      return "Moteur Intermarket";
     case pathname?.startsWith("/calendar") ?? false:
-      return "Smart Calendar";
+      return "Calendrier intelligent";
     case pathname?.startsWith("/journal") ?? false:
       return "Journal & Playbook";
     default:
