@@ -5,9 +5,24 @@ import { Search, X } from "lucide-react";
 
 import { api } from "~/trpc/react";
 import { Panel } from "~/app/_components/ui/panel";
-import { type NewsImpact } from "~/server/services/news";
+// Type-only import — the news service is server-only; pulling a runtime value
+// from it into this Client Component would bundle "server-only" into the client.
+import { type NewsCategory, type NewsImpact } from "~/server/services/news";
 
 type FilterId = "all" | "critical" | "normal";
+
+const CATEGORIES: NewsCategory[] = [
+  "Bonds",
+  "Commodities",
+  "Crypto",
+  "Equities",
+  "Forex",
+  "Indexes",
+  "Macro",
+  "Market Moving",
+  "Elite",
+  "Risk",
+];
 
 const FILTERS: Array<{ id: FilterId; label: string; dot?: string }> = [
   { id: "all", label: "Tout" },
@@ -17,7 +32,16 @@ const FILTERS: Array<{ id: FilterId; label: string; dot?: string }> = [
 
 export default function NewsPage() {
   const [filter, setFilter] = useState<FilterId>("all");
+  const [cats, setCats] = useState<Set<NewsCategory>>(new Set());
   const [q, setQ] = useState("");
+
+  const toggleCat = (c: NewsCategory) =>
+    setCats((prev) => {
+      const next = new Set(prev);
+      if (next.has(c)) next.delete(c);
+      else next.add(c);
+      return next;
+    });
 
   // Client "now" for relative timestamps without a hydration mismatch.
   const [now, setNow] = useState<number | null>(null);
@@ -40,14 +64,23 @@ export default function NewsPage() {
     return { all: data?.length ?? 0, critical, normal: (data?.length ?? 0) - critical };
   }, [data]);
 
+  // Per-category counts for the chip badges.
+  const catCounts = useMemo(() => {
+    const m = new Map<NewsCategory, number>();
+    for (const n of data ?? [])
+      for (const c of n.categories) m.set(c, (m.get(c) ?? 0) + 1);
+    return m;
+  }, [data]);
+
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
     return (data ?? []).filter((n) => {
       if (filter !== "all" && n.impact !== filter) return false;
+      if (cats.size && !n.categories.some((c) => cats.has(c))) return false;
       if (needle && !n.title.toLowerCase().includes(needle)) return false;
       return true;
     });
-  }, [data, filter, q]);
+  }, [data, filter, cats, q]);
 
   return (
     <div className="mx-auto flex max-w-[1100px] flex-col gap-4 p-4">
@@ -74,41 +107,63 @@ export default function NewsPage() {
       </div>
 
       {/* Filter bar */}
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-md border border-(--color-border) bg-(--color-panel)/60 p-3">
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] uppercase tracking-widest text-(--color-fg-mute)">
-            Impact
-          </span>
-          <div className="flex flex-wrap items-center gap-1.5">
-            {FILTERS.map((f) => (
-              <Chip key={f.id} active={filter === f.id} onClick={() => setFilter(f.id)}>
-                {f.dot && <span className={`size-1.5 rounded-full ${f.dot}`} />}
-                {f.label}
-                <span className="tabular text-(--color-fg-mute)">
-                  {f.id === "all"
-                    ? counts.all
-                    : f.id === "critical"
-                      ? counts.critical
-                      : counts.normal}
-                </span>
-              </Chip>
-            ))}
+      <div className="flex flex-col gap-3 rounded-md border border-(--color-border) bg-(--color-panel)/60 p-3">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] uppercase tracking-widest text-(--color-fg-mute)">
+              Impact
+            </span>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {FILTERS.map((f) => (
+                <Chip key={f.id} active={filter === f.id} onClick={() => setFilter(f.id)}>
+                  {f.dot && <span className={`size-1.5 rounded-full ${f.dot}`} />}
+                  {f.label}
+                  <span className="tabular text-(--color-fg-mute)">
+                    {f.id === "all"
+                      ? counts.all
+                      : f.id === "critical"
+                        ? counts.critical
+                        : counts.normal}
+                  </span>
+                </Chip>
+              ))}
+            </div>
+          </div>
+
+          <div className="ml-auto flex items-center gap-2 rounded-sm border border-(--color-border) bg-(--color-panel-2) px-2 py-1">
+            <Search size={12} className="text-(--color-fg-mute)" />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Filtrer les titres…"
+              className="w-44 bg-transparent text-xs text-(--color-fg) placeholder:text-(--color-fg-mute) focus:outline-none"
+            />
+            {q && (
+              <button onClick={() => setQ("")} aria-label="effacer">
+                <X size={12} className="text-(--color-fg-mute) hover:text-(--color-fg)" />
+              </button>
+            )}
           </div>
         </div>
 
-        <div className="ml-auto flex items-center gap-2 rounded-sm border border-(--color-border) bg-(--color-panel-2) px-2 py-1">
-          <Search size={12} className="text-(--color-fg-mute)" />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Filtrer les titres…"
-            className="w-44 bg-transparent text-xs text-(--color-fg) placeholder:text-(--color-fg-mute) focus:outline-none"
-          />
-          {q && (
-            <button onClick={() => setQ("")} aria-label="effacer">
-              <X size={12} className="text-(--color-fg-mute) hover:text-(--color-fg)" />
-            </button>
+        {/* Category chips (multi-select, OR semantics) */}
+        <div className="flex flex-wrap items-center gap-2 border-t border-(--color-border) pt-3">
+          <span className="text-[10px] uppercase tracking-widest text-(--color-fg-mute)">
+            Catégories
+          </span>
+          {cats.size > 0 && (
+            <Chip active={false} onClick={() => setCats(new Set())}>
+              <X size={11} /> Effacer
+            </Chip>
           )}
+          {CATEGORIES.map((c) => (
+            <Chip key={c} active={cats.has(c)} onClick={() => toggleCat(c)}>
+              {c}
+              <span className="tabular text-(--color-fg-mute)">
+                {catCounts.get(c) ?? 0}
+              </span>
+            </Chip>
+          ))}
         </div>
       </div>
 

@@ -10,6 +10,22 @@ import { cfetch } from "~/server/services/http";
 
 export type NewsImpact = "critical" | "normal";
 
+// FinancialJuice-style topical categories. The RSS carries no category field,
+// so we classify each headline ourselves (keyword match, multi-label).
+export const NEWS_CATEGORIES = [
+  "Bonds",
+  "Commodities",
+  "Crypto",
+  "Equities",
+  "Forex",
+  "Indexes",
+  "Macro",
+  "Market Moving",
+  "Elite",
+  "Risk",
+] as const;
+export type NewsCategory = (typeof NEWS_CATEGORIES)[number];
+
 export interface NewsItem {
   id: string;
   title: string;
@@ -19,6 +35,8 @@ export interface NewsItem {
   impact: NewsImpact;
   /** Coarse topic tag for the chip (CB / Geo / Data / Markets / News). */
   tag: string;
+  /** FinancialJuice-style topical categories (multi-label) for filtering. */
+  categories: NewsCategory[];
 }
 
 const FEEDS: Array<{ url: string; source: string; prefix?: RegExp }> = [
@@ -77,6 +95,55 @@ function tagOf(title: string): string {
   return "News";
 }
 
+// Topical category rules (multi-label). Tuned against the live feed: with these
+// ~85-90% of headlines land in at least one asset/macro category. "Market
+// Moving" mirrors the critical flag and "Elite" the FinancialJuice premium tag.
+const CATEGORY_RULES: Array<{ cat: NewsCategory; re: RegExp }> = [
+  {
+    cat: "Bonds",
+    re: /\b(treasur|t-note|t-bond|t-bill|\bbills?\b|bund|gilt|jgb|btp|\boat\b|bond|yield|2s10s|coupon|debt auction|sovereign|\d+-?(year|week|month) (bond|note|bill|auction|yield)|duration)\b/i,
+  },
+  {
+    cat: "Commodities",
+    re: /\b(oil|crude|wti|brent|nymex|opec|\bgold\b|silver|copper|platinum|palladium|nat ?gas|natural gas|\blng\b|gasoline|diesel|distillate|cushing|gallon|metals?|wheat|corn|soybean|commodit|barrel|bbl)\b/i,
+  },
+  {
+    cat: "Crypto",
+    re: /\b(bitcoin|btc|ethereum|eth|crypto|stablecoin|blockchain|coinbase|binance|solana|xrp)\b/i,
+  },
+  {
+    cat: "Equities",
+    re: /(\b(stocks?|shares?|equit|earnings|ipo|dividend|buyback|guidance|merger|acquisition|listing|offering|corp|\binc\b|plc|holdings|options contracts)\b|\$[A-Za-z]{1,5}\b)/i,
+  },
+  {
+    cat: "Forex",
+    re: /\b(dollar|euro|yen|pound|sterling|franc|yuan|peso|forex|\bfx\b|currenc|dxy|eur\/usd|usd\/jpy|gbp|exchange rate|devalu)\b/i,
+  },
+  {
+    cat: "Indexes",
+    re: /(s&p|s&amp;p|nasdaq|dow jones|\bdow\b|ftse|dax|\bcac\b|nikkei|hang seng|russell|stoxx|e-mini|\bindex\b|indices|sensex|mo[oc] imbalance)/i,
+  },
+  {
+    cat: "Macro",
+    re: /\b(fed|fomc|ecb|boj|boe|pboc|snb|rba|rbnz|central bank|powell|lagarde|cpi|ppi|pce|inflation|gdp|payroll|unemploy|jobless|retail sales|redbook|building permits|pmi|rate (decision|hike|cut)|interest rate|fiscal|budget|tariff|\btrade\b|sentiment|survey|economic|home price|housing|mortgage|minister|chancellor|government|parliament|white house|kremlin|sanction|\bwar\b|nuclear|missile|rocket|military|\bidf\b|hezbollah|hamas|israel|iran|ukrain|russia|gaza|hormuz|troops|election|diplomat|treaty|summit|trump|commerce secretary|official)\b/i,
+  },
+  {
+    cat: "Risk",
+    re: /\b(risk-?on|risk-?off|risk appetite|safe ?haven|flight to|volatilit|\bvix\b|\bhaven\b|fear ?&? ?greed|panic|sell-?off|rout|plunge|surge|rally|crash|melt-?up|melt-?down)\b/i,
+  },
+];
+
+function categorize(
+  title: string,
+  opts: { critical: boolean; elite: boolean },
+): NewsCategory[] {
+  const cats: NewsCategory[] = [];
+  for (const { cat, re } of CATEGORY_RULES) if (re.test(title)) cats.push(cat);
+  if (opts.critical) cats.push("Market Moving");
+  if (opts.elite) cats.push("Elite");
+  return cats;
+}
+
 // --- parsing -----------------------------------------------------------------
 
 function stripCdata(s: string): string {
@@ -116,20 +183,24 @@ async function fetchFeed(feed: (typeof FEEDS)[number]): Promise<NewsItem[]> {
     for (const b of blocks) {
       let title = field(b, "title");
       if (feed.prefix) title = title.replace(feed.prefix, "").trim();
-      // Drop FinancialJuice's promotional source tags ("- FJElite", "- FJ").
+      // The "- FJElite" suffix marks FinancialJuice premium items: record it for
+      // the Elite filter, then drop the promotional tag from the display title.
+      const elite = /-\s*FJElite\s*$/i.test(title);
       title = title.replace(/\s*-\s*FJ(Elite)?\s*$/i, "").trim();
       const url = field(b, "link") || field(b, "guid");
       if (!title || !url) continue;
       const pub = field(b, "pubDate") || field(b, "dc:date");
       const ts = pub ? new Date(pub).getTime() : Date.now();
+      const impact = classify(title);
       out.push({
         id: `${feed.source}-${field(b, "guid") || url}`,
         title,
         url,
         source: feed.source,
         ts: Number.isFinite(ts) ? ts : Date.now(),
-        impact: classify(title),
+        impact,
         tag: tagOf(title),
+        categories: categorize(title, { critical: impact === "critical", elite }),
       });
     }
     return out;
