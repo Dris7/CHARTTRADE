@@ -184,7 +184,15 @@ export function ChartPanel({
     const series = seriesRef.current;
     const vol = volRef.current;
     if (!chart || !series || !vol) return;
-    const data = candles.data?.candles ?? [];
+    const raw = candles.data?.candles ?? [];
+    // Guard the chart boundary: some upstream sources occasionally emit "n/a"
+    // (a string) for OHLC/volume, which makes lightweight-charts throw and
+    // crash the whole page. Drop rows without finite OHLC, and coerce volume.
+    const num = (x: unknown): x is number =>
+      typeof x === "number" && Number.isFinite(x);
+    const data = raw.filter(
+      (d) => num(d.o) && num(d.h) && num(d.l) && num(d.c),
+    );
     if (data.length === 0) return;
     if (style === "candles") {
       (series as ISeriesApi<"Candlestick">).setData(
@@ -204,7 +212,7 @@ export function ChartPanel({
     vol.setData(
       data.map((d) => ({
         time: d.t as Time,
-        value: d.v,
+        value: num(d.v) ? d.v : 0,
         color: d.c >= d.o ? "rgba(33,201,123,0.35)" : "rgba(236,77,82,0.35)",
       })),
     );

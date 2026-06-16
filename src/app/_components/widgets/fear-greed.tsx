@@ -32,7 +32,7 @@ export function FearGreed() {
   return (
     <Panel
       title="Fear & Greed"
-      hint={isLoading ? "chargement…" : data?.date ? `crypto · ${data.date}` : "flux indisponible"}
+      hint={isLoading ? "chargement…" : data?.date ? `actions US · ${data.date}` : "flux indisponible"}
     >
       {isLoading ? (
         <div className="h-28 animate-pulse rounded-sm bg-(--color-panel-2)/60" />
@@ -90,7 +90,7 @@ export function FearGreed() {
             </span>
             <Spark data={data?.history ?? []} width={110} height={26} stroke={t.color} />
             <span className="text-[9px] text-(--color-fg-mute)">
-              alternative.me · 30j
+              CNN · 30j
             </span>
           </div>
         </div>

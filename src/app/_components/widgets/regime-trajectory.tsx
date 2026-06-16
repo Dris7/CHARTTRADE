@@ -41,6 +41,26 @@ export function RegimeTrajectory() {
     return { path, zeroY: y(0), band05Top: y(0.5), band05Bot: y(-0.5), area };
   }, [tl, iW, iH]);
 
+  // Evenly-spaced date ticks for the x-axis (like the lightweight-charts panels).
+  const ticks = useMemo(() => {
+    if (tl.length < 2) return [];
+    const x = (i: number) => padL + (i / (tl.length - 1)) * iW;
+    const N = Math.min(5, tl.length);
+    return Array.from({ length: N }, (_, k) => {
+      const i = Math.round((k * (tl.length - 1)) / (N - 1));
+      return {
+        x: x(i),
+        date: tl[i]!.date,
+        anchor:
+          k === 0
+            ? ("start" as const)
+            : k === N - 1
+              ? ("end" as const)
+              : ("middle" as const),
+      };
+    });
+  }, [tl, iW]);
+
   const cur = data?.current;
   const sum = data?.summary;
 
@@ -77,6 +97,16 @@ export function RegimeTrajectory() {
             <text x={padL - 3} y={band05Bot} textAnchor="end" dominantBaseline="middle" fontSize={7} fill="var(--color-down)">-0.5</text>
             <path d={area} fill="var(--color-accent)" opacity={0.06} />
             <path d={path} fill="none" stroke="var(--color-accent)" strokeWidth={1.5} strokeLinejoin="round" />
+
+            {/* x-axis date ticks */}
+            {ticks.map((t, k) => (
+              <g key={k}>
+                <line x1={t.x} y1={H - padB} x2={t.x} y2={H - padB + 3} stroke="var(--color-border-strong)" strokeWidth={0.5} />
+                <text x={t.x} y={H - 3} textAnchor={t.anchor} fontSize={7} fill="var(--color-fg-mute)">
+                  {fmtTick(t.date)}
+                </text>
+              </g>
+            ))}
           </svg>
 
           {/* analog engine summary */}
@@ -108,6 +138,14 @@ export function RegimeTrajectory() {
       )}
     </Panel>
   );
+}
+
+function fmtTick(date: string): string {
+  return new Date(`${date}T00:00:00Z`).toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  });
 }
 
 function Stat({

@@ -84,8 +84,9 @@ async function fetchSocrata(
     `&$select=${encodeURIComponent(select)}`;
   const res = await cfetch(url, {
     headers: { "User-Agent": UA, Accept: "application/json" },
-    // Weekly data — share across serverless invocations for 6h.
-    revalidate: 21600,
+    // Weekly data, but released Fri ~15:30 ET — keep the cache short (1h) so a
+    // fresh report shows up promptly instead of pinning the prior week.
+    revalidate: 3600,
     timeoutMs: 9000,
   });
   if (!res.ok) throw new Error(`cftc ${res.status}`);
@@ -201,6 +202,6 @@ export async function getCotPositioning(): Promise<CotRow[]> {
   const order = [...TFF_CONTRACTS, ...DISAGG_CONTRACTS].map((c) => c.code);
   rows.sort((a, b) => order.indexOf(a.code) - order.indexOf(b.code));
 
-  if (rows.length > 0) cache = { exp: Date.now() + 6 * 3600_000, rows };
+  if (rows.length > 0) cache = { exp: Date.now() + 3600_000, rows };
   return rows;
 }

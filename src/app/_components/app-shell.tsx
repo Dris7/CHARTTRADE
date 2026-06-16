@@ -9,6 +9,7 @@ import {
   Gauge,
   LineChart,
   Network,
+  Newspaper,
   Notebook,
   Radio,
   Settings,
@@ -24,6 +25,7 @@ const NAV: Array<{
   group: "core" | "terminal" | "tools";
 }> = [
   { href: "/", label: "Tableau macro", icon: Gauge, group: "core" },
+  { href: "/news", label: "Actualités", icon: Newspaper, group: "core" },
   { href: "/bonds", label: "Terminal Bonds", icon: Activity, group: "terminal" },
   { href: "/sp500", label: "Terminal SP500", icon: TrendingUp, group: "terminal" },
   { href: "/intermarket", label: "Intermarket", icon: Network, group: "terminal" },
@@ -138,6 +140,8 @@ function pageTitle(pathname: string | null): string {
   switch (true) {
     case pathname === "/":
       return "Tableau de bord macro global";
+    case pathname?.startsWith("/news") ?? false:
+      return "Fil d’actualité en direct";
     case pathname?.startsWith("/bonds") ?? false:
       return "Terminal Bonds";
     case pathname?.startsWith("/sp500") ?? false:
